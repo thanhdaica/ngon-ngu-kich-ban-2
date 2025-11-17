@@ -38,7 +38,8 @@ export function AuthProvider({ children }) {
     setUser({ 
         _id: response.data._id, 
         name: response.data.name, 
-        email: response.data.email 
+        email: response.data.email, 
+        isAdmin: response.data.isAdmin,
     });
     
     return response.data; // Trả về data cho RegisterPage
@@ -56,7 +57,8 @@ export function AuthProvider({ children }) {
     setUser({ 
         _id: response.data._id, 
         name: response.data.name, 
-        email: response.data.email 
+        email: response.data.email, 
+        isAdmin: response.data.isAdmin,
     });
     
     return response.data; // Trả về data cho LoginPage

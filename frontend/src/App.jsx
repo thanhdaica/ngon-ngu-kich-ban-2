@@ -13,6 +13,14 @@ import RegisterPage from "./pages/RegisterPage";
 import CartPage from './pages/CartPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 import CheckoutPage from './pages/CheckoutPage';
+import AdminLayout from './layouts/AdminLayout'; 
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminOrderList from './pages/admin/AdminOrderList';
+import AdminOrderDetail from './pages/admin/AdminOrderDetail';
+import AdminBookList from './pages/admin/AdminBookList';
+import AdminBookForm from './pages/admin/AdminBookForm';
+import AdminUserList from './pages/admin/AdminUserList';
+import PaymentStatusPage from './pages/PaymentStatusPage';
 // (Bạn cũng cần import BookDetailPage khi tạo nó)
 
 
@@ -49,8 +57,23 @@ function App() {
             <Route path="/book/:id" 
             element={<ProductDetailPage />} 
             />
+            <Route path="/payment-status/:orderId" 
+            element={<PaymentStatusPage />} 
+            />
+          </Route>
 
-            {/* (Thêm <Route path="/book/:id" ... /> vào đây khi bạn tạo) */}
+          <Route element={<AdminLayout />}>
+             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+             <Route path="/admin/orders" element={<AdminOrderList />} /> 
+             {/* ROUTE CHI TIẾT ĐƠN HÀNG */}
+             <Route path="/admin/order/:id" element={<AdminOrderDetail />} />
+             {/* ROUTE QUẢN LÝ SÁCH */}
+             <Route path="/admin/books" element={<AdminBookList />} />
+             <Route path="/admin/books/add" element={<AdminBookForm />} />
+             <Route path="/admin/books/edit/:id" element={<AdminBookForm />} />
+             {/* ROUTE QUẢN LÝ NGƯỜI DÙNG */}
+             <Route path="/admin/users" element={<AdminUserList />} />
+             {/* Thêm các trang quản lý khác vào đây: /admin/orders, /admin/books, ... */}
           </Route>
 
           {/* B. Các trang RIÊNG (không có Header/Footer) */}

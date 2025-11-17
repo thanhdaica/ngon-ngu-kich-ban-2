@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button'; 
-import { User, LogOut } from 'lucide-react';
+import { User, LogOut, LayoutDashboard } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '../../context/AuthContext'; 
@@ -40,6 +40,17 @@ const UserAccount = () => {
         <DropdownMenuContent>
           <DropdownMenuItem>Xin chào, {user.name}</DropdownMenuItem>
           <DropdownMenuSeparator />
+
+          {/* LOGIC MỚI: CHỈ HIỂN THỊ NÚT ADMIN NẾU isAdmin LÀ TRUE */}
+          {user.isAdmin && (
+            <DropdownMenuItem asChild>
+                <Link to="/admin/dashboard" className="flex items-center">
+                    <LayoutDashboard className="w-4 h-4 mr-2" />
+                    Trang Quản Trị
+                </Link>
+            </DropdownMenuItem>
+          )}
+          
           <DropdownMenuItem asChild><Link to="/profile">Tài khoản của tôi</Link></DropdownMenuItem>
           <DropdownMenuItem onClick={combinedLogout} className="text-red-600">
             <LogOut className="w-4 h-4 mr-2" />

@@ -15,18 +15,27 @@ class OrderController {
         }
 
         try {
-            // 2. TÌM GIỎ HÀNG THỰC TẾ của user (Để tránh user tự gửi dữ liệu orderItems)
+            // 2. TÌM GIỎ HÀNG THỰC TẾ của user
+            // Populate để lấy thông tin chi tiết của sách (name, price, coverUrl)
             const cart = await Cart.findOne({ user: userId }).populate('items.product', 'name price coverUrl');
             
             if (!cart || cart.items.length === 0) {
                 return res.status(400).json({ message: 'Giỏ hàng của bạn đang trống.' });
             }
 
-            // 3. TÍNH TOÁN LẠI TỔNG TIỀN (Backend phải tự tính toán, không tin vào FE)
+            // 3. TÍNH TOÁN LẠI TỔNG TIỀN (VÀ LỌC SẢN PHẨM LỖI)
             let itemsPrice = 0;
             const finalOrderItems = [];
             
             for (const item of cart.items) {
+                
+                // <== BỔ SUNG KIỂM TRA ĐIỀU KIỆN (FIX LỖI 500) ==>
+                if (!item.product || !item.product.price) {
+                    console.warn(`Sản phẩm trong giỏ hàng (ID: ${item.product?._id || 'Unknown'}) không tồn tại hoặc thiếu giá. Bỏ qua.`);
+                    continue; // Bỏ qua sản phẩm lỗi (Ghost Item)
+                }
+                // <===========================================>
+
                 // Lấy giá và tên sách từ Object 'product' đã được populate
                 const price = item.product.price;
                 const name = item.product.name;
@@ -43,6 +52,11 @@ class OrderController {
                     price,
                     product: item.product._id // ID sách
                 });
+            }
+
+            // Kiểm tra nếu sau khi lọc, giỏ hàng không còn sản phẩm nào
+            if (finalOrderItems.length === 0) {
+                 return res.status(400).json({ message: 'Giỏ hàng của bạn chỉ chứa các sản phẩm không còn tồn tại. Vui lòng cập nhật giỏ hàng.' });
             }
 
             // Giả định: Phí ship cố định
@@ -93,6 +107,22 @@ class OrderController {
             }
         } catch (error) {
             res.status(500).json({ message: 'Lỗi server khi xem chi tiết đơn hàng', error: error.message });
+        }
+    }
+    /**
+     * [GET] /api/order/
+     * MỤC ĐÍCH: Lấy tất cả đơn hàng (Chỉ Admin)
+     */
+    async getAllOrders(req, res) {
+        try {
+            // Lấy tất cả đơn hàng và populate tên/email user
+            const orders = await Order.find({})
+                .populate('user', 'name email');
+
+            res.json(orders);
+        } catch (error) {
+            console.error('❌ Lỗi khi lấy tất cả đơn hàng:', error);
+            res.status(500).json({ message: 'Lỗi server khi lấy danh sách đơn hàng', error: error.message });
         }
     }
 }

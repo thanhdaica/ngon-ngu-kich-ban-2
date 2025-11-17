@@ -98,15 +98,19 @@ const handleCheckoutAPI = async (shippingAddress, paymentMethod) => {
         
         const createdOrder = response.data.data;
         setCart({ user: createdOrder.user, items: [] }); 
-        toast.success(`Đơn hàng #${createdOrder._id.substring(0, 8)} đã được tạo!`);
-        return true; // Báo hiệu thành công cho CheckoutPage
+        
+        if (paymentMethod === 'COD') {
+            toast.success(`Đơn hàng #${createdOrder._id.substring(0, 8)} đã được tạo!`);
+        }
+        
+        return response.data; // <== TRẢ VỀ TOÀN BỘ DATA ĐƠN HÀNG
     } catch (error) {
         console.error("Lỗi Thanh toán:", error);
         toast.error(error.response?.data?.message || "Lỗi khi tạo đơn hàng.");
         return false; // Báo hiệu thất bại
     }
 };
-  // 5. Cung cấp state và hàm
+  // 6. Cung cấp state và hàm
   return (
     <CartContext.Provider value={{ cart, setCart, loading, addToCart, removeFromCart,handleCheckoutAPI }}>
       {children}
@@ -114,7 +118,7 @@ const handleCheckoutAPI = async (shippingAddress, paymentMethod) => {
   );
 }
 
-// 5. Hook (để dễ sử dụng)
+//  Hook (để dễ sử dụng)
 export const useCart = () => {
   return useContext(CartContext);
 };

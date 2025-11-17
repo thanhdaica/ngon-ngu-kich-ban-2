@@ -15,6 +15,11 @@ const userSchema = new mongoose.Schema({
         required: true,
         minlength: [6]
     },
+    isAdmin: { 
+        type: Boolean,
+        required: true,
+        default: false // Mặc định là false
+    }
     
 });
 export default mongoose.model('User', userSchema);    

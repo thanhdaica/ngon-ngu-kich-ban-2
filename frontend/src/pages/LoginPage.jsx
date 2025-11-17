@@ -16,10 +16,18 @@ export default function LoginPage() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      await login(email, password); 
+      // 1. GỌI HÀM LOGIN VÀ LẤY DATA VỀ
+      const userData = await login(email, password); 
       
       toast.success('Đăng nhập thành công!');
-      navigate('/'); // Chuyển về trang chủ
+      
+      // 2. KIỂM TRA QUYỀN HẠN ĐỂ CHUYỂN HƯỚNG
+      if (userData && userData.isAdmin) {
+          navigate('/admin/dashboard'); // Chuyển đến trang Admin
+      } else {
+          navigate('/'); // Chuyển về trang chủ cho User thường
+      }
+      
     } catch (error) {
       toast.error(error.response?.data?.message || 'Email hoặc mật khẩu sai');
     }

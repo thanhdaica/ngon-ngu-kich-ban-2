@@ -78,6 +78,7 @@ class UserController {
                     _id: user._id,
                     name: user.name,
                     email: user.email,
+                    isAdmin: user.isAdmin,
                     token: generateToken(user._id) // Cấp token mới
                 });
             } else {
@@ -94,7 +95,8 @@ class UserController {
         const user = {
             _id: req.user._id,
             name: req.user.name,
-            email: req.user.email
+            email: req.user.email,
+            isAdmin: req.user.isAdmin,
         };
         res.json(user);
     }
@@ -132,7 +134,56 @@ class UserController {
         }
     }
     
-    // (Các hàm khác bạn đã có: index, show, update, delete...)
+    /**
+     * [GET] /api/user
+     * MỤC ĐÍCH: Lấy tất cả người dùng (Chỉ Admin)
+     */
+    async index(req, res) {
+        try {
+            // Lấy tất cả user, trừ mật khẩu
+            const users = await User.find({}).select('-password');
+            res.json(users);
+        } catch (error) {
+            res.status(500).json({ message: "Lỗi lấy danh sách người dùng", error: error.message });
+        }
+    }
+
+    /**
+     * [PUT] /api/user/:id/role
+     * MỤC ĐÍCH: Thăng cấp/Hạ cấp quyền Admin
+     */
+    async promoteToAdmin(req, res) {
+        const { id } = req.params;
+        // Frontend sẽ gửi { isAdmin: true/false }
+        const { isAdmin } = req.body; 
+
+        if (req.user._id.toString() === id) {
+             return res.status(400).json({ message: 'Không thể tự thay đổi quyền của bản thân' });
+        }
+
+        try {
+            const userToUpdate = await User.findById(id).select('-password');
+
+            if (!userToUpdate) {
+                return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+            }
+
+            // Cập nhật trường isAdmin
+            userToUpdate.isAdmin = isAdmin; 
+
+            const updatedUser = await userToUpdate.save();
+
+            res.json({
+                _id: updatedUser._id,
+                name: updatedUser.name,
+                email: updatedUser.email,
+                isAdmin: updatedUser.isAdmin,
+                message: `Cập nhật quyền thành công.`
+            });
+        } catch (error) {
+            res.status(400).json({ message: "Lỗi cập nhật quyền", error: error.message });
+        }
+    }
     
 }
 

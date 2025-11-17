@@ -48,7 +48,7 @@ const orderSchema = new mongoose.Schema({
   paymentMethod: {
     type: String, 
     required: true,
-    enum: ['COD', 'VNPAY', 'Momo', 'BankTransfer'] // Các phương thức thanh toán
+    enum: ['COD', 'VNPAY', 'MoMo', 'BankTransfer'] // Các phương thức thanh toán
   },
   
   // Tổng tiền đơn hàng

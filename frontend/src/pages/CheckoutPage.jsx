@@ -11,10 +11,12 @@ export default function CheckoutPage() {
     const navigate = useNavigate();
 
     const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+    // THÊM FLAG MỚI ĐỂ BỎ QUA LOGIC BẢO VỆ
+    const [isRedirecting, setIsRedirecting] = useState(false);
     
     // --- KHỐI LOGIC BẢO VỆ CHUYỂN HƯỚNG ---
     useEffect(() => {
-        if (checkoutSuccess) {
+        if (checkoutSuccess|| isRedirecting) {
             return; 
         }
 
@@ -27,7 +29,7 @@ export default function CheckoutPage() {
                  navigate('/cart');
             }
         }
-    }, [user, cart, navigate, checkoutSuccess]);
+    }, [user, cart, navigate, checkoutSuccess,isRedirecting]);
 
     // 1. State lưu thông tin form
     const [formData, setFormData] = useState({
@@ -51,6 +53,8 @@ export default function CheckoutPage() {
             toast.error("Vui lòng nhập đầy đủ địa chỉ và số điện thoại.");
             return;
         }
+        // Báo hiệu cho useEffect rằng chúng ta sắp rời khỏi trang (có chủ đích)
+        setIsRedirecting(true);
 
         const shippingAddress = {
             fullName: formData.fullName,
@@ -59,11 +63,22 @@ export default function CheckoutPage() {
             phone: formData.phone,
         };
         
-        const success = await handleCheckoutAPI(shippingAddress, formData.paymentMethod);
+        // BƯỚC 1: TẠO ĐƠN HÀNG TRONG DB
+        const orderData = await handleCheckoutAPI(shippingAddress, formData.paymentMethod);
         
-        if(success) {
-            setCheckoutSuccess(true); 
-            navigate('/');
+        if(orderData) {
+            const orderId = orderData.data._id;
+            
+            // BƯỚC 2: CHUYỂN HƯỚNG TÙY THEO PHƯƠNG THỨC THANH TOÁN
+            if (formData.paymentMethod === 'COD') {
+                setCheckoutSuccess(true);
+                navigate('/');
+            } else if (formData.paymentMethod === 'MoMo') {
+                navigate(`/payment-status/${orderId}`); // Lệnh chuyển hướng được thực hiện
+            }
+        } else {
+            // Nếu API tạo đơn hàng thất bại, reset lại cờ để user có thể ở lại trang
+            setIsRedirecting(false);
         }
     };
     
@@ -97,7 +112,7 @@ export default function CheckoutPage() {
                         <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="Địa chỉ chi tiết (Số nhà, tên đường...)" className="w-full p-3 border rounded" required />
                         <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="Tỉnh/Thành phố" className="w-full p-3 border rounded" required />
                         
-                        {/* === PHƯƠNG THỨC THANH TOÁN === */}
+                        {/* === PHƯƠNG THỨC THANH TOÁN (MoMo) === */}
                         <h2 className="text-xl font-semibold border-b pb-2 pt-4">Phương thức thanh toán</h2>
                         <div className="space-y-2">
                             <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
@@ -105,12 +120,11 @@ export default function CheckoutPage() {
                                 <span className="font-medium">Thanh toán khi nhận hàng (COD)</span>
                             </label>
                             <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                                <input type="radio" name="paymentMethod" value="VNPAY" checked={formData.paymentMethod === 'VNPAY'} onChange={handleChange} />
-                                <span className="font-medium">Thanh toán VNPAY/Thẻ ATM</span>
+                                <input type="radio" name="paymentMethod" value="MoMo" checked={formData.paymentMethod === 'MoMo'} onChange={handleChange} />
+                                <span className="font-medium">Thanh toán online quét mã MoMo</span>
                             </label>
                         </div>
 
-                        {/* Nút Submit (Đặt bên trong form) */}
                         <button type="submit" className="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition-colors mt-6">
                             Xác nhận và Đặt hàng
                         </button>
