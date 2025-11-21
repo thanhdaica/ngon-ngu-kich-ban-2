@@ -1,8 +1,8 @@
+// backend/controllers/paymentController.js
 import Order from '../model/Order.js';
 import crypto from 'crypto';
 import axios from 'axios';
 import 'dotenv/config'; 
-// import mongoose from 'mongoose'; // <== ĐÃ XÓA (Không cần thiết)
 
 // Hàm sắp xếp (Giữ nguyên)
 function sortObject(obj) {
@@ -29,17 +29,15 @@ class PaymentController {
                 return res.status(404).json({ message: 'Không tìm thấy đơn hàng hoặc không phải của bạn' });
             }
 
-            // 2. Chuẩn bị tham số VÀ ĐẢM BẢO KHÓA SẠCH (FIX LỖI TRIMS)
-            const partnerCode = process.env.MOMO_PARTNER_CODE?.trim(); // <== THÊM .trim()
-            const accessKey = process.env.MOMO_ACCESS_KEY?.trim();   // <== THÊM .trim()
-            const secretKey = process.env.MOMO_SECRET_KEY?.trim();     // <== THÊM .trim()
+            // 2. Chuẩn bị tham số VÀ LÀM SẠCH KHÓA BÍ MẬT
+            const partnerCode = process.env.MOMO_PARTNER_CODE?.trim(); 
+            const accessKey = process.env.MOMO_ACCESS_KEY?.trim();   
+            const secretKey = process.env.MOMO_SECRET_KEY?.trim();     
             
-            // <== KIỂM TRA KHÓA BÍ MẬT ĐỂ TRÁNH CRASH ==>
             if (!secretKey || !partnerCode || !accessKey) {
-                 console.error('❌ LỖI CẤU HÌNH: Khóa MoMo bị thiếu hoặc chưa load.');
+                 console.error('❌ LỖI CẤU HÌNH: Khóa MoMo bị thiếu.');
                  return res.status(500).json({ message: 'Lỗi cấu hình Backend: Khóa MoMo (Partner/Secret Key) bị thiếu.' });
             }
-            // <=======================================>
             
             const amountInteger = Math.round(amount); 
             const requestId = orderId; 
@@ -49,15 +47,15 @@ class PaymentController {
             // --- 3. TẠO CHUỖI KÝ (SIGNATURE) ---
             let signatureParams = {
                 accessKey: accessKey,
-                amount: amountInteger,
+                amount: amountInteger, // Cần là Integer (Đã được làm tròn)
                 orderId: orderId,
                 orderInfo: orderInfo,
                 partnerCode: partnerCode,
                 redirectUrl: `http://localhost:5173/payment-status/${orderId}`, 
-                ipnUrl: process.env.MOMO_IPN_URL,
+                ipnUrl: process.env.MOMO_IPN_URL?.trim(), // Đảm bảo URL cũng sạch
                 requestId: requestId,
                 requestType: requestType,
-                extraData: extraData,
+                extraData: extraData, 
             };
 
             signatureParams = sortObject(signatureParams);
@@ -73,7 +71,7 @@ class PaymentController {
             // --- 4. GỌI MOMO API ---
             const requestBody = {
                 ...signatureParams, 
-                lang: 'vi', 
+                lang: 'vi', // Thêm lang vào body
                 signature: signature, 
             };
             
@@ -85,22 +83,50 @@ class PaymentController {
                     qrCodeUrl: momoResponse.data.qrCodeUrl 
                 });
             } else {
-                // MoMo Response trả về lỗi 400
-                console.error('MoMo Response Error:', momoResponse.data);
-                res.status(400).json({ message: 'Lỗi từ cổng MoMo', details: momoResponse.data });
+                console.error('MoMo Response Error (400):', momoResponse.data);
+                res.status(400).json({ 
+                    message: momoResponse.data?.message || 'Lỗi từ cổng MoMo', 
+                    details: momoResponse.data 
+                });
             }
 
         } catch (error) {
-            // Bắt lỗi hệ thống (như lỗi không thể kết nối hoặc crash)
             console.error('❌ Lỗi tạo thanh toán MoMo (Backend Catch):', error.message);
             res.status(500).json({ message: 'Lỗi server không xác định khi gọi MoMo API', error: error.message });
         }
     }
+
     /**
      * [POST] /api/payment/momo_ipn (Giữ nguyên)
      */
     async momoIPN(req, res) {
-        // ... (phần còn lại giữ nguyên) ...
+        const result = req.body;
+        console.log("💰 MoMo IPN Received:", result);
+        
+        const orderId = result.orderId;
+        const resultCode = result.resultCode; 
+
+        if (resultCode === 0) { 
+            try {
+                await Order.findByIdAndUpdate(orderId, {
+                    isPaid: true,
+                    paidAt: new Date(),
+                    paymentMethod: 'MoMo',
+                    status: 'Processing',
+                    paymentResult: { 
+                        id: result.transId, 
+                        status: 'SUCCESS', 
+                        update_time: new Date().toISOString() 
+                    }
+                });
+                console.log(`✅ Đơn hàng ${orderId} đã được thanh toán thành công qua MoMo.`);
+            } catch (error) {
+                console.error(`Lỗi cập nhật DB sau IPN cho Order ${orderId}:`, error);
+                return res.status(500).send('DB Update Error');
+            }
+        }
+        
+        res.status(204).send(); 
     }
 }
 
