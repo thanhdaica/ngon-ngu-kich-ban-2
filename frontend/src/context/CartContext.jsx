@@ -32,7 +32,7 @@ export function CartProvider({ children }) {
         return; 
       }
       try {
-        const response = await axios.get('http://localhost:3000/api/cart', config);
+        const response = await axios.get('/api/cart', config);
         setCart(response.data);
       } catch (error) {
         console.error("Lỗi tải giỏ hàng:", error.response?.data?.message);
@@ -51,7 +51,7 @@ export function CartProvider({ children }) {
       return; 
     }
     try {
-      const response = await axios.post('http://localhost:3000/api/cart', 
+      const response = await axios.post('/api/cart', 
         { productId, quantity }, 
         config
       );
@@ -67,7 +67,7 @@ export function CartProvider({ children }) {
     const config = getAuthConfig();
     if (!config) return; 
     try {
-      const response = await axios.delete(`http://localhost:3000/api/cart/${productId}`, config);
+      const response = await axios.delete(`/api/cart/${productId}`, config);
       setCart(response.data); // Cập nhật state giỏ hàng
       toast.success("Đã xóa khỏi giỏ hàng.");
     } catch (error) {
@@ -91,7 +91,7 @@ const handleCheckoutAPI = async (shippingAddress, paymentMethod) => {
 
     try {
         const response = await axios.post(
-            'http://localhost:3000/api/order', 
+            '/api/order', 
             checkoutData, 
             config
         );

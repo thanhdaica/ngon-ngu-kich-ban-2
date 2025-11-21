@@ -1,37 +1,35 @@
 import express from 'express';
-import 'dotenv/config'; // Cách 1: Import và tự động chạy config
+import 'dotenv/config';
 import router from './routes/index.js';
 import connectMDB from './connect.js';
 import cors from 'cors';
 import path from "path";
+import { fileURLToPath } from 'url'; // Import thêm cái này
+
 const app = express();
-
 const PORT = process.env.PORT || 3000;
-const __dirname = path.resolve();
-//middleware
+
+// Cấu hình chính xác cho __dirname trong ES Module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 app.use(express.json());
-if(process.env.NODE_ENV !== 'production'){
-  app.use(cors({ origin: "http://localhost:5173" }));
-}
+app.use(cors()); // Cho phép CORS cơ bản
 
-
-
-// Routes
-// Lưu ý: Bạn đang import 'router' từ './routes/index.js' và gọi nó như một function.
-// Đảm bảo file './routes/index.js' của bạn được thiết kế để nhận 'app' làm đối số.
+// Routes API
 router(app);
 
-  app.use(express.static(path.join(__dirname,"../frontend/dist")));
+// Cấu hình phục vụ Frontend (Deploy Monorepo)
+// Vì file index.js nằm trong folder /backend, nên cần lùi ra 1 cấp (../) để vào frontend
+app.use(express.static(path.join(__dirname, "../frontend/dist")));
 
-  app.get("*",(req,res)=>{
-  res.sendFile(path.join(__dirname,"../frontend/dist/index.html"));
-  });
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../frontend/dist/index.html"));
+});
 
-//kết nối với database
 const uri = process.env.MONGO_URI || null;
-connectMDB(uri)
-  .then(() => {
+connectMDB(uri).then(() => {
     app.listen(PORT, () => {
       console.log(`Server bắt đầu trên cổng ${PORT}`);
     });
-  });
+});

@@ -24,7 +24,7 @@ export default function CategoryDetailPage() {
       setLoading(true);
       try {
         // 3. Gọi API backend bạn vừa tạo
-        const response = await axios.get(`http://localhost:3000/api/book/category/${id}`);
+        const response = await axios.get(`/api/book/category/${id}`);
         
         // 4. Lưu dữ liệu vào state
         if (response.data) {

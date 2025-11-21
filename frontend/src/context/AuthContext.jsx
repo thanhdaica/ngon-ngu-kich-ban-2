@@ -28,7 +28,7 @@ export function AuthProvider({ children }) {
   const register = async (name, email, password) => {
     // try/catch phải nằm trong component gọi (RegisterPage), 
     // ở đây chỉ xử lý logic thành công
-    const response = await axios.post('http://localhost:3000/api/user/register', {
+    const response = await axios.post('/api/user/register', {
         name, email, password,
     });
     
@@ -47,7 +47,7 @@ export function AuthProvider({ children }) {
   
   // Hàm ĐĂNG NHẬP (login)
   const login = async (email, password) => {
-    const response = await axios.post('http://localhost:3000/api/user/login', {
+    const response = await axios.post('/api/user/login', {
         email, password,
     });
     
@@ -78,7 +78,7 @@ export function AuthProvider({ children }) {
             const config = getAuthConfig();
             if (config) {
               try {
-                   const response = await axios.get('http://localhost:3000/api/user/profile', config);
+                   const response = await axios.get('/api/user/profile', config);
                    setUser(response.data);
               } catch (error) {
                    localStorage.removeItem('token');

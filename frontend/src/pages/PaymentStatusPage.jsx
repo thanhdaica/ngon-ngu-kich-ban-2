@@ -27,7 +27,7 @@ export default function PaymentStatusPage() {
             
             try {
                 // 1. Lấy thông tin đơn hàng 
-                const orderResponse = await axios.get(`http://localhost:3000/api/order/${orderId}`, config);
+                const orderResponse = await axios.get(`/api/order/${orderId}`, config);
                 const orderData = orderResponse.data;
                 
                 if (orderData.isPaid) { 
@@ -37,7 +37,7 @@ export default function PaymentStatusPage() {
                 }
                 
                 // 2. GỌI API BACKEND ĐỂ TẠO QR CODE MoMo
-                const createUrl = 'http://localhost:3000/api/payment/momo_create';
+                const createUrl = '/api/payment/momo_create';
                 
                 const paymentResponse = await axios.post(createUrl, { 
                     orderId: orderData._id, 
@@ -76,7 +76,7 @@ export default function PaymentStatusPage() {
 
                 try {
                     // Gọi API xem chi tiết đơn hàng
-                    const response = await axios.get(`http://localhost:3000/api/order/${orderId}`, config);
+                    const response = await axios.get(`/api/order/${orderId}`, config);
                     
                     if (response.data.isPaid === true) {
                         setStatus('success');

@@ -17,7 +17,7 @@ export default function AdminUserList() {
         };
         try {
             // Gọi API Admin: GET /api/user
-            const response = await axios.get('http://localhost:3000/api/user', config);
+            const response = await axios.get('/api/user', config);
             setUsers(response.data);
         } catch (error) {
             console.error("Lỗi tải user:", error);
@@ -46,7 +46,7 @@ export default function AdminUserList() {
         
         try {
             // Gọi API Promote/Demote mới tạo
-            await axios.put(`http://localhost:3000/api/user/${userId}/role`, { isAdmin: newIsAdminStatus }, config);
+            await axios.put(`/api/user/${userId}/role`, { isAdmin: newIsAdminStatus }, config);
             
             toast.success(`Đã ${newIsAdminStatus ? 'thăng cấp' : 'hạ cấp'} thành công.`);
             fetchUsers(); // Tải lại danh sách

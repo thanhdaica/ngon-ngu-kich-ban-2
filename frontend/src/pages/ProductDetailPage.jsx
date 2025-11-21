@@ -24,7 +24,7 @@ export default function ProductDetailPage() {
       setLoading(true);
       try {
         // API backend: GET /api/books/:id
-        const response = await axios.get(`http://localhost:3000/api/book/${id}`);
+        const response = await axios.get(`/api/book/${id}`);
         setBook(response.data);
       } catch (error) {
         console.error("Lỗi khi tải chi tiết sách:", error);

@@ -22,7 +22,7 @@ export default function AdminOrderDetail() {
 
             try {
                 // API đã có sẵn: GET /api/order/:id
-                const response = await axios.get(`http://localhost:3000/api/order/${orderId}`, config);
+                const response = await axios.get(`/api/order/${orderId}`, config);
                 setOrder(response.data);
             } catch (error) {
                 console.error("Lỗi tải chi tiết đơn hàng:", error);

@@ -13,7 +13,7 @@ export default function CategoryList() {
     const fetchCategories = async () => {
       try {
         // 2. Dùng axios.get
-        const response = await axios.get('http://localhost:3000/api/category');
+        const response = await axios.get('/api/category');
         
         // 3. Dữ liệu nằm ngay trong response.data
         const data = response.data; 

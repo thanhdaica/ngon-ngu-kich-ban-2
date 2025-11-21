@@ -18,7 +18,7 @@ export default function AdminOrderList() {
 
             try {
                 // Gọi API Admin mới tạo
-                const response = await axios.get('http://localhost:3000/api/order', config);
+                const response = await axios.get('/api/order', config);
                 setOrders(response.data);
             } catch (error) {
                 console.error("Lỗi tải đơn hàng:", error);

@@ -39,7 +39,7 @@ export default function AdminDashboard() {
 
             try {
                 // Gọi API thống kê mới tạo
-                const response = await axios.get('http://localhost:3000/api/dashboard/stats', config);
+                const response = await axios.get('/api/dashboard/stats', config);
                 setStats(response.data);
             } catch (error) {
                 console.error("Lỗi tải số liệu Dashboard:", error);

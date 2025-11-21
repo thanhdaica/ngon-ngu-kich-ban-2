@@ -32,7 +32,7 @@ export default function AdminBookForm() {
         const fetchBookData = async () => {
             try {
                 // API công khai: GET /api/book/:id
-                const response = await axios.get(`http://localhost:3000/api/book/${id}`);
+                const response = await axios.get(`/api/book/${id}`);
                 const bookData = response.data;
                 setFormData({
                     name: bookData.name || '',
@@ -73,8 +73,8 @@ export default function AdminBookForm() {
 
         const method = isEditMode ? 'put' : 'post';
         const url = isEditMode 
-            ? `http://localhost:3000/api/book/${id}` 
-            : 'http://localhost:3000/api/book';
+            ? `/api/book/${id}` 
+            : '/api/book';
 
         try {
             await axios[method](url, formData, config);

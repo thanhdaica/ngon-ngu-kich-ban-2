@@ -13,7 +13,7 @@ export default function ProductList() {
     // (Toàn bộ logic fetch API... giữ nguyên y hệt)
     const fetchProducts = async () => {
       try {
-        const response = await axios.get('http://localhost:3000/api/book');
+        const response = await axios.get('/api/book');
         const data = response.data; 
         
         if (Array.isArray(data)) {

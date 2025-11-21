@@ -21,6 +21,8 @@
   },
   "homepage": "https://github.com/thanhdaica/ngon-ngu-kich-ban-2#readme",
   "dependencies": {
-    "backend": "^0.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0" 
   }
 }
