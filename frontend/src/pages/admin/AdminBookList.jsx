@@ -16,7 +16,7 @@ export default function AdminBookList() {
         setLoading(true);
         try {
             // Dùng API công khai /api/book
-            const response = await axios.get('http://localhost:3000/api/book');
+            const response = await axios.get('/api/book');
             setBooks(response.data);
         } catch (error) {
             console.error("Lỗi tải sách:", error);
@@ -39,7 +39,7 @@ export default function AdminBookList() {
         };
 
         try {
-            await axios.delete(`http://localhost:3000/api/book/${bookId}`, config);
+            await axios.delete(`/api/book/${bookId}`, config);
             toast.success("Xóa sách thành công!");
             fetchBooks(); // Tải lại danh sách
         } catch (error) {
