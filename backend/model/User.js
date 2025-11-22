@@ -18,8 +18,19 @@ const userSchema = new mongoose.Schema({
     isAdmin: { 
         type: Boolean,
         required: true,
-        default: false // Mặc định là false
+        default: false 
+    },
+    // --- THÊM CÁC TRƯỜNG CHO BẢO MẬT ---
+    isVerified: {
+        type: Boolean,
+        default: false // Mặc định chưa xác thực
+    },
+    otp: {
+        type: String, // Lưu mã OTP
+    },
+    otpExpires: {
+        type: Date,   // Thời gian hết hạn OTP
     }
-    
 });
-export default mongoose.model('User', userSchema);    
+
+export default mongoose.model('User', userSchema);

@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import User from '../model/User.js';
 import bcrypt from 'bcryptjs';     // Dùng để mã hóa/so sánh mật khẩu
 import jwt from 'jsonwebtoken';  // Dùng để tạo/ký token
+import sendEmail from '../utils/sendEmail.js';
 
 // --- HÀM TẠO TOKEN ---
 // Dùng "con dấu" bí mật trong file .env
@@ -18,38 +19,45 @@ const generateToken = (id) => {
 
 class UserController {
 
-    /**
-     * BƯỚC 1: ĐĂNG KÝ (REGISTER)
-     * API: POST /api/user/register
-     */
+    // 1. ĐĂNG KÝ (Sửa đổi) -> Chưa trả về token ngay
     async register(req, res) {
         try {
             const { name, email, password } = req.body;
 
-            // 1. Kiểm tra xem email đã tồn tại chưa
             const userExists = await User.findOne({ email: email.toLowerCase() });
             if (userExists) {
-                return res.status(400).json({ message: "Email đã tồn tại" });
+                // Nếu user đã tồn tại nhưng chưa xác thực, ta có thể cho phép gửi lại OTP (Optional logic)
+                // Ở đây ta báo lỗi cho đơn giản
+                return res.status(400).json({ message: "Email đã được sử dụng" });
             }
 
-            // 2. Mã hóa mật khẩu (Không bao giờ lưu mật khẩu gốc)
+            // Mã hóa mật khẩu
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(password, salt);
 
-            // 3. Tạo người dùng mới trong database
+            // Tạo OTP 6 số ngẫu nhiên
+            const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+            // OTP hết hạn sau 10 phút
+            const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+
+            // Tạo user (isVerified = false)
             const newUser = await User.create({
                 name,
-                email,
-                password: hashedPassword, // Lưu mật khẩu đã mã hóa
+                email: email.toLowerCase(),
+                password: hashedPassword,
+                otp: otpCode,
+                otpExpires: otpExpires,
+                isVerified: false
             });
 
-            // 4. Trả về thông tin và token
             if (newUser) {
+                // Gửi Email OTP
+                const message = `Mã xác thực (OTP) của bạn là: ${otpCode}. Mã này sẽ hết hạn sau 10 phút.`;
+                await sendEmail(newUser.email, "Xác thực tài khoản Shop Sách", message);
+
                 res.status(201).json({
-                    _id: newUser._id,
-                    name: newUser.name,
-                    email: newUser.email,
-                    token: generateToken(newUser._id) // Cấp token ngay khi đăng ký
+                    message: "Đăng ký thành công. Vui lòng kiểm tra email để nhập mã xác thực.",
+                    email: newUser.email // Trả về email để frontend dùng
                 });
             } else {
                 res.status(400).json({ message: "Dữ liệu người dùng không hợp lệ" });
@@ -59,30 +67,74 @@ class UserController {
         }
     }
 
-    /**
-     * BƯỚC 2: ĐĂNG NHẬP (LOGIN)
-     * API: POST /api/user/login
-     */
+    // 2. XÁC THỰC EMAIL (Hàm mới)
+    async verifyEmail(req, res) {
+        try {
+            const { email, otp } = req.body;
+
+            const user = await User.findOne({ email: email.toLowerCase() });
+
+            if (!user) {
+                return res.status(400).json({ message: "Không tìm thấy người dùng" });
+            }
+
+            if (user.isVerified) {
+                return res.status(400).json({ message: "Tài khoản đã được xác thực trước đó" });
+            }
+
+            // Kiểm tra OTP và thời gian hết hạn
+            if (user.otp !== otp) {
+                return res.status(400).json({ message: "Mã OTP không chính xác" });
+            }
+
+            if (user.otpExpires < Date.now()) {
+                return res.status(400).json({ message: "Mã OTP đã hết hạn. Vui lòng đăng ký lại." });
+            }
+
+            // Xác thực thành công
+            user.isVerified = true;
+            user.otp = undefined; // Xóa OTP sau khi dùng
+            user.otpExpires = undefined;
+            await user.save();
+
+            // Trả về Token để tự động đăng nhập
+            res.status(200).json({
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                isAdmin: user.isAdmin,
+                token: generateToken(user._id),
+                message: "Xác thực thành công!"
+            });
+
+        } catch (error) {
+            res.status(500).json({ message: "Lỗi xác thực", error: error.message });
+        }
+    }
+
+    // 3. ĐĂNG NHẬP (Sửa đổi: Kiểm tra đã xác thực chưa)
     async login(req, res) {
         try {
             const { email, password } = req.body;
-
-            // 1. Tìm người dùng theo email
             const user = await User.findOne({ email });
 
-            // 2. Nếu tìm thấy user, so sánh mật khẩu
-            // (bcrypt.compare sẽ tự động so sánh password gốc với password đã mã hóa)
             if (user && (await bcrypt.compare(password, user.password))) {
-                // 3. Nếu mật khẩu khớp, trả về thông tin và token
+                
+                // CHECK BẢO MẬT: Nếu chưa xác thực thì không cho đăng nhập
+                if (!user.isVerified) {
+                    return res.status(401).json({ 
+                        message: "Tài khoản chưa xác thực email. Vui lòng kiểm tra email." 
+                    });
+                }
+
                 res.json({
                     _id: user._id,
                     name: user.name,
                     email: user.email,
                     isAdmin: user.isAdmin,
-                    token: generateToken(user._id) // Cấp token mới
+                    token: generateToken(user._id)
                 });
             } else {
-                // Nếu sai email hoặc sai mật khẩu
                 res.status(401).json({ message: "Email hoặc mật khẩu không đúng" });
             }
         } catch (error) {

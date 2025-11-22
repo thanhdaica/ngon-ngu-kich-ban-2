@@ -21,6 +21,7 @@ import AdminBookList from './pages/admin/AdminBookList';
 import AdminBookForm from './pages/admin/AdminBookForm';
 import AdminUserList from './pages/admin/AdminUserList';
 import PaymentStatusPage from './pages/PaymentStatusPage';
+import VerifyOtpPage from './pages/VerifyOtpPage';
 // (Bạn cũng cần import BookDetailPage khi tạo nó)
 
 
@@ -78,6 +79,7 @@ function App() {
 
           {/* B. Các trang RIÊNG (không có Header/Footer) */}
           {/* Để các trang này bên ngoài MainLayout */}
+          <Route path="/verify-otp" element={<VerifyOtpPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="*" element={<NotFound />} /> 

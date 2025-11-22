@@ -16,34 +16,29 @@ const getAuthConfig = () => {
      return { headers: { 'Authorization': `Bearer ${token}` } };
 };
 
+
 // 2. Tạo "Nhà cung cấp"
 export function AuthProvider({ children }) {
      const [user, setUser] = useState(null);
      const [token, setToken] = useState(getToken());
      const [loading, setLoading] = useState(true);
+     // HÀM MỚI: Helper để set token từ bên ngoài (dùng cho trang VerifyOtpPage)
+     const setTokenAndUser = (token, userData) => {
+        localStorage.setItem('token', token);
+        setToken(token);
+        setUser(userData);
+     };
 
   // --- HÀM LOGIC (KHAI BÁO TRƯỚC RETURN) ---
 
-  // Hàm ĐĂNG KÝ (register)
-  const register = async (name, email, password) => {
-    // try/catch phải nằm trong component gọi (RegisterPage), 
-    // ở đây chỉ xử lý logic thành công
-    const response = await axios.post('/api/user/register', {
-        name, email, password,
-    });
-    
-    // Cập nhật trạng thái
-    localStorage.setItem('token', response.data.token);
-    setToken(response.data.token);
-    setUser({ 
-        _id: response.data._id, 
-        name: response.data.name, 
-        email: response.data.email, 
-        isAdmin: response.data.isAdmin,
-    });
-    
-    return response.data; // Trả về data cho RegisterPage
-  };
+  // SỬA HÀM REGISTER: Không lưu token ngay, chỉ trả về kết quả
+    const register = async (name, email, password) => {
+        const response = await axios.post('/api/user/register', {
+            name, email, password,
+        });
+        // API bây giờ trả về { message, email } chứ không phải token
+        return response.data; 
+    };
   
   // Hàm ĐĂNG NHẬP (login)
   const login = async (email, password) => {
@@ -94,7 +89,7 @@ export function AuthProvider({ children }) {
 
      return (
     // 4. Cung cấp tất cả các hàm và state
-         <AuthContext.Provider value={{ user, token, login, logout, register, loading }}>
+         <AuthContext.Provider value={{ user, token, login, logout, register, loading, setTokenAndUser }}>
             {children}
          </AuthContext.Provider>
      );

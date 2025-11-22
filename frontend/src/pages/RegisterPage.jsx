@@ -22,12 +22,14 @@ export default function RegisterPage() {
     }
 
     try {
-      await register(name, email, password); 
+      // Gọi API đăng ký (Backend sẽ gửi mail)
+      const data = await register(name, email, password); 
 
-      toast.success('Đăng ký thành công!');
+      toast.success(data.message);
       
-      // Context đã lo việc lưu token, giờ chỉ cần chuyển trang
-      navigate('/');
+      // CHUYỂN HƯỚNG SANG TRANG OTP, TRUYỀN KÈM EMAIL
+      navigate('/verify-otp', { state: { email: email } });
+
     } catch (error) {
       toast.error(error.response?.data?.message || 'Đã xảy ra lỗi không xác định');
     }
