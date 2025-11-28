@@ -1,4 +1,3 @@
-// src/context/CartContext.jsx
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -58,7 +57,24 @@ export function CartProvider({ children }) {
     }
   };
 
-  // 3. Hàm XÓA khỏi giỏ
+  // 3. Hàm UPDATE số lượng (MỚI)
+  const updateQuantity = async (productId, newQuantity) => {
+      const config = getAuthConfig();
+      if (!config) return;
+      
+      if (newQuantity < 1) return; // Không cho giảm dưới 1
+
+      try {
+          // Gọi API PUT để cập nhật số lượng mới
+          const response = await axios.put('/api/cart', { productId, quantity: newQuantity }, config);
+          setCart(response.data);
+      } catch (error) {
+          console.error("Lỗi cập nhật số lượng:", error);
+          toast.error("Không thể cập nhật số lượng.");
+      }
+  };
+
+  // 4. Hàm XÓA khỏi giỏ
   const removeFromCart = async (productId) => {
     const config = getAuthConfig();
     if (!config) return; 
@@ -71,7 +87,7 @@ export function CartProvider({ children }) {
     }
   };
 
-  // 4. Hàm THANH TOÁN (UPDATED)
+  // 5. Hàm THANH TOÁN
   const handleCheckoutAPI = async (shippingAddress, paymentMethod, selectedItemIds) => {
     const config = getAuthConfig();
 
@@ -80,17 +96,11 @@ export function CartProvider({ children }) {
         return false;
     }
     
-    // Gửi kèm danh sách ID sản phẩm được chọn
     const checkoutData = { shippingAddress, paymentMethod, selectedItemIds };
 
     try {
-        const response = await axios.post(
-            '/api/order', 
-            checkoutData, 
-            config
-        );
+        const response = await axios.post('/api/order', checkoutData, config);
         
-        // Cập nhật lại giỏ hàng (Lấy dữ liệu mới nhất từ server sau khi server đã xóa item mua)
         const newCartResponse = await axios.get('/api/cart', config);
         setCart(newCartResponse.data);
         
@@ -107,7 +117,7 @@ export function CartProvider({ children }) {
   };
 
   return (
-    <CartContext.Provider value={{ cart, setCart, loading, addToCart, removeFromCart, handleCheckoutAPI }}>
+    <CartContext.Provider value={{ cart, setCart, loading, addToCart, updateQuantity, removeFromCart, handleCheckoutAPI }}>
       {children}
     </CartContext.Provider>
   );

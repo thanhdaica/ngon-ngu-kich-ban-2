@@ -1,44 +1,38 @@
-// frontend/src/pages/CartPage.jsx
 import React, { useState } from 'react';
 import { useCart } from '../context/CartContext'; 
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
+import { Minus, Plus, Trash2 } from 'lucide-react'; // Import thêm Icon
 
 export default function CartPage() {
-  const { cart, removeFromCart, loading } = useCart(); 
+  const { cart, removeFromCart, updateQuantity, loading } = useCart(); // Lấy updateQuantity
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // State lưu danh sách ID các sản phẩm được chọn
   const [selectedItems, setSelectedItems] = useState([]);
 
   if (loading) {
     return <div className="container mx-auto p-8 text-center">Đang tải giỏ hàng...</div>;
   }
 
-  // Logic chọn 1 sản phẩm
   const handleCheckboxChange = (productId) => {
     if (selectedItems.includes(productId)) {
-      // Nếu đang chọn -> Bỏ chọn
       setSelectedItems(selectedItems.filter(id => id !== productId));
     } else {
-      // Nếu chưa chọn -> Thêm vào
       setSelectedItems([...selectedItems, productId]);
     }
   };
 
-  // Logic chọn tất cả
   const handleSelectAll = () => {
     if (!cart?.items) return;
     if (selectedItems.length === cart.items.length) {
-      setSelectedItems([]); // Bỏ chọn hết
+      setSelectedItems([]); 
     } else {
-      setSelectedItems(cart.items.map(item => item.product._id)); // Chọn hết
+      setSelectedItems(cart.items.map(item => item.product._id)); 
     }
   };
 
-  // Tính tổng tiền CHỈ CHO CÁC SẢN PHẨM ĐƯỢC CHỌN
   const selectedTotal = cart?.items?.reduce((sum, item) => {
       if (selectedItems.includes(item.product._id)) {
           return sum + (item.product.price * item.quantity);
@@ -46,7 +40,6 @@ export default function CartPage() {
       return sum;
   }, 0) || 0;
 
-  // Chuyển sang trang thanh toán
   const handleCheckoutRedirect = () => {
       if (!user) {
           toast.error("Vui lòng đăng nhập để thanh toán!");
@@ -56,11 +49,9 @@ export default function CartPage() {
           toast.error("Bạn chưa chọn sản phẩm nào để thanh toán!");
           return;
       }
-      // Chuyển hướng kèm theo dữ liệu selectedItems
       navigate('/checkout', { state: { selectedItems } });
   };
 
-  // Giao diện khi giỏ hàng trống
   if (!cart?.items?.length) {
     return (
       <div className="container mx-auto p-8">
@@ -85,7 +76,6 @@ export default function CartPage() {
         
         {/* DANH SÁCH SẢN PHẨM */}
         <div className="md:col-span-2 space-y-4">
-           {/* Header chọn tất cả */}
            <div className="flex items-center p-4 bg-white shadow rounded-lg">
               <input 
                 type="checkbox" 
@@ -98,7 +88,6 @@ export default function CartPage() {
 
           {cart.items.map((item) => (
             <div key={item.product._id} className="flex items-center bg-white shadow rounded-lg p-4 transition hover:shadow-md">
-               {/* CHECKBOX */}
                <input 
                 type="checkbox" 
                 className="w-5 h-5 mr-4 cursor-pointer accent-red-600"
@@ -107,26 +96,46 @@ export default function CartPage() {
               />
 
               <img src={item.product.coverUrl} alt={item.product.name} className="w-20 h-28 object-cover rounded border" />
+              
               <div className="flex-1 ml-4">
                 <h2 className="text-lg font-semibold text-gray-800">{item.product.name}</h2>
                 <p className="text-sm text-gray-500 mt-1">Đơn giá: {item.product.price.toLocaleString('vi-VN')}đ</p>
-                <p className="text-gray-600 mt-1">Số lượng: x{item.quantity}</p>
+                
+                {/* --- NÚT TĂNG GIẢM SỐ LƯỢNG (MỚI) --- */}
+                <div className="flex items-center mt-3">
+                    <button 
+                        onClick={() => updateQuantity(item.product._id, item.quantity - 1)}
+                        className="p-1 rounded-md bg-gray-100 hover:bg-gray-200 disabled:opacity-50 transition"
+                        disabled={item.quantity <= 1}
+                    >
+                        <Minus className="w-4 h-4" />
+                    </button>
+                    <span className="mx-3 font-medium w-8 text-center">{item.quantity}</span>
+                    <button 
+                        onClick={() => updateQuantity(item.product._id, item.quantity + 1)}
+                        className="p-1 rounded-md bg-gray-100 hover:bg-gray-200 transition"
+                    >
+                        <Plus className="w-4 h-4" />
+                    </button>
+                </div>
+
                 <p className="text-lg font-bold text-red-600 mt-2">
                   {(item.product.price * item.quantity).toLocaleString('vi-VN')}đ
                 </p>
               </div>
+              
               <button 
                 onClick={() => removeFromCart(item.product._id)} 
-                className="text-gray-400 hover:text-red-600 font-semibold p-2"
+                className="text-gray-400 hover:text-red-600 font-semibold p-2 transition"
                 title="Xóa sản phẩm"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                <Trash2 className="w-5 h-5" />
               </button>
             </div>
           ))}
         </div>
 
-        {/* CỘT TỔNG KẾT (STICKY) */}
+        {/* CỘT TỔNG KẾT */}
         <div className="md:col-span-1">
           <div className="bg-white shadow rounded-lg p-6 sticky top-24 border border-gray-100">
             <h2 className="text-xl font-bold mb-6 text-gray-800 border-b pb-2">Thanh toán</h2>
