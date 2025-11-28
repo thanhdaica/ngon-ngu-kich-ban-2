@@ -28,10 +28,23 @@ export default function LoginPage() {
           navigate('/'); // Chuyển về trang chủ cho User thường
       }
       
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Email hoặc mật khẩu sai');
+    } catch (error){
+      // --- LOGIC MỚI: BẮT LỖI CHƯA VERIFY ---
+      const responseData = error.response?.data;
+      
+      if (error.response?.status === 401 && responseData?.needVerify) {
+          toast.error("Tài khoản chưa xác thực. Đang chuyển đến trang nhập OTP...");
+          // Chuyển hướng sang trang OTP kèm email
+          setTimeout(() => {
+              navigate('/verify-otp', { state: { email: responseData.email || email } });
+          }, 1500);
+          return;
+      }
+      // ---------------------------------------
+
+      toast.error(responseData?.message || 'Email hoặc mật khẩu sai');
     }
-  };
+};
 
   // Logic nút "Bỏ qua"
   const handleSkip = () => {
