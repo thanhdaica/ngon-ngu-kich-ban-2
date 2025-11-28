@@ -6,6 +6,8 @@ import cors from 'cors';
 import path from "path";
 import { fileURLToPath } from 'url'; // Import thêm cái này
 
+console.log("Check Env Email:", process.env.EMAIL_USER);
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
