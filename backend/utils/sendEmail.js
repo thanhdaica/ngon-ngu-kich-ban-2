@@ -2,29 +2,20 @@ import nodemailer from 'nodemailer';
 
 const sendEmail = async (email, subject, text) => {
     try {
+        // Sử dụng 'service: gmail' để Nodemailer tự động cấu hình port/host chuẩn nhất
         const transporter = nodemailer.createTransport({
-            host: "smtp.gmail.com",
-            port: 587,
-            secure: false, 
+            service: 'gmail', 
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS,
             },
-            tls: {
-                rejectUnauthorized: false
-            },
-            family: 4, // Ép buộc dùng IPv4 để tránh lỗi mạng
-            // --- THÊM CẤU HÌNH TIMEOUT ĐỂ TRÁNH TREO APP ---
-            connectionTimeout: 10000, // 10 giây không kết nối được thì hủy
-            greetingTimeout: 5000,    // 5 giây không chào hỏi được thì hủy
-            socketTimeout: 10000,     // 10 giây không gửi được dữ liệu thì hủy
+            // Thêm timeout để tránh bị treo server
+            connectionTimeout: 10000, 
+            greetingTimeout: 5000,
         });
 
         console.log(`⏳ Đang gửi email tới: ${email}...`);
 
-        // BỎ QUA transporter.verify() vì nó hay gây treo trên Render
-        
-        // Gửi mail luôn
         const info = await transporter.sendMail({
             from: `"Shop Sách 3 Anh Em" <${process.env.EMAIL_USER}>`,
             to: email,
@@ -37,8 +28,7 @@ const sendEmail = async (email, subject, text) => {
 
     } catch (error) {
         console.error("❌ Gửi email thất bại. Chi tiết lỗi:");
-        // In lỗi gọn gàng hơn để dễ đọc
-        console.error(error.message || error); 
+        console.error(error.message || error); // Log message lỗi cho gọn
         return false;
     }
 };
