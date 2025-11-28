@@ -31,12 +31,14 @@ export function AuthProvider({ children }) {
 
   // --- HÀM LOGIC (KHAI BÁO TRƯỚC RETURN) ---
 
-  // SỬA HÀM REGISTER: Không lưu token ngay, chỉ trả về kết quả
-    const register = async (name, email, password) => {
+  // SỬA HÀM NÀY: Thêm tham số captchaToken
+    const register = async (name, email, password, captchaToken) => {
         const response = await axios.post('/api/user/register', {
-            name, email, password,
+            name, 
+            email, 
+            password,
+            captchaToken // Gửi kèm mã xác thực về server
         });
-        // API bây giờ trả về { message, email } chứ không phải token
         return response.data; 
     };
   

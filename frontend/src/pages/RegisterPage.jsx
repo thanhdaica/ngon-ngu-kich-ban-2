@@ -2,43 +2,65 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
+import ReCAPTCHA from "react-google-recaptcha"; // 1. Import thư viện
 
 export default function RegisterPage() {
+  // State cho form đăng ký
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  
+  // 2. Thêm state lưu token captcha
+  const [captchaToken, setCaptchaToken] = useState(null);
+
   const navigate = useNavigate();
   const { register } = useAuth();
 
+  // Logic xử lý đăng ký
   const handleRegister = async (e) => {
     e.preventDefault(); 
+    
+    // Validate mật khẩu
     if (password.length < 6) {
       toast.error('Mật khẩu phải có ít nhất 6 ký tự');
       return;
     }
 
+    // 3. Kiểm tra xem người dùng đã check Captcha chưa
+    if (!captchaToken) {
+        toast.error("Vui lòng xác nhận bạn không phải là người máy!");
+        return;
+    }
+
     try {
-      // Gọi API đăng ký
-      await register(name, email, password); 
+      // 4. Gọi API đăng ký (Truyền thêm captchaToken)
+      // Lưu ý: Bạn cần chắc chắn hàm register trong AuthContext đã được sửa để nhận 4 tham số
+      await register(name, email, password, captchaToken); 
 
       toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
       
-      // CHUYỂN HƯỚNG VỀ TRANG LOGIN
+      // Chuyển hướng sang trang đăng nhập
       navigate('/login');
 
     } catch (error) {
       toast.error(error.response?.data?.message || 'Đã xảy ra lỗi không xác định');
+      // Reset captcha nếu lỗi để người dùng check lại
+      setCaptchaToken(null);
     }
   };
 
   const handleSkip = () => {
-    navigate('/'); 
+    navigate('/'); // Quay về trang chủ
   };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      
+      {/* Hộp nội dung */}
       <div className="w-full max-w-md bg-white rounded-lg shadow-xl overflow-hidden">
+        
+        {/* Phần Tabs */}
         <div className="flex border-b">
           <Link to="/login" className="w-1/2 text-center py-4 bg-gray-50 hover:bg-gray-100">
             <span className="text-lg font-semibold text-gray-500">
@@ -52,8 +74,11 @@ export default function RegisterPage() {
           </div>
         </div>
 
+        {/* Phần Form */}
         <div className="p-8">
           <form className="space-y-6" onSubmit={handleRegister}>
+            
+            {/* Input Tên */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Tên của bạn
@@ -68,6 +93,7 @@ export default function RegisterPage() {
               />
             </div>
 
+            {/* Input Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Số điện thoại/Email
@@ -82,6 +108,7 @@ export default function RegisterPage() {
               />
             </div>
 
+            {/* Input Mật khẩu */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Mật khẩu
@@ -105,7 +132,16 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <div className="space-y-4 pt-4">
+            {/* 5. PHẦN HIỂN THỊ CAPTCHA */}
+            <div className="flex justify-center my-4">
+                <ReCAPTCHA
+                    sitekey="6LfzExssAAAAANFDc43OP_lfEKpT-KJiCoG_66KX" 
+                    onChange={(token) => setCaptchaToken(token)}
+                />
+            </div>
+
+            {/* Các nút bấm */}
+            <div className="space-y-4 pt-2">
               <button
                 type="submit"
                 className="w-full px-4 py-3 font-bold text-white bg-gray-300 rounded-md hover:bg-gray-400"
@@ -121,8 +157,10 @@ export default function RegisterPage() {
                 Bỏ qua
               </button>
             </div>
+
           </form>
         </div>
+
       </div>
     </div>
   );

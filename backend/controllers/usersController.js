@@ -1,6 +1,7 @@
 import User from '../model/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import axios from 'axios';
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
@@ -8,43 +9,55 @@ const generateToken = (id) => {
 
 class UserController {
 
-    // 1. ĐĂNG KÝ (Đã xóa gửi mail)
+    // 1. ĐĂNG KÝ (CÓ CHECK CAPTCHA)
     async register(req, res) {
         try {
-            const { name, email, password } = req.body;
+            // 2. Lấy thêm captchaToken từ body
+            const { name, email, password, captchaToken } = req.body;
             
+            // --- BẮT ĐẦU LOGIC CHECK CAPTCHA ---
+            if (!captchaToken) {
+                return res.status(400).json({ message: "Vui lòng xác thực Captcha" });
+            }
+
+            // Gọi sang Google để kiểm tra token
+            const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`;
+            
+            const googleResponse = await axios.post(verifyUrl);
+            const { success } = googleResponse.data;
+
+            if (!success) {
+                 return res.status(400).json({ message: "Xác thực người máy thất bại. Vui lòng thử lại." });
+            }
+            // --- KẾT THÚC LOGIC CHECK CAPTCHA ---
+
+
+            // ... (Phần logic kiểm tra User cũ và tạo User mới GIỮ NGUYÊN như code bạn đang có) ...
             const userExists = await User.findOne({ email: email.toLowerCase() });
             if (userExists) {
                 return res.status(400).json({ message: "Email đã được sử dụng" });
             }
-
-            // Mã hóa mật khẩu
+            
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(password, salt);
 
-            // Tạo user mới (isVerified mặc định là true trong Model)
             const user = await User.create({
                 name,
                 email: email.toLowerCase(),
-                password: hashedPassword
+                password: hashedPassword,
+                isVerified: true // Vì đã bỏ OTP nên set luôn là true
             });
 
             if (user) {
                 res.status(201).json({
-                    _id: user._id,
-                    name: user.name,
-                    email: user.email,
-                    isAdmin: user.isAdmin,
-                    // Có thể trả về token luôn nếu muốn auto-login, 
-                    // nhưng ở đây ta chỉ trả về thông báo để chuyển sang trang login
                     message: "Đăng ký thành công! Bạn có thể đăng nhập ngay."
                 });
             } else {
-                res.status(400).json({ message: "Dữ liệu người dùng không hợp lệ" });
+                res.status(400).json({ message: "Dữ liệu không hợp lệ" });
             }
 
         } catch (error) {
-            console.error(error); 
+            console.error(error);
             res.status(500).json({ message: "Lỗi đăng ký server", error: error.message });
         }
     }
