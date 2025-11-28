@@ -4,23 +4,30 @@ import router from './routes/index.js';
 import connectMDB from './connect.js';
 import cors from 'cors';
 import path from "path";
-import { fileURLToPath } from 'url'; // Import thêm cái này
+import { fileURLToPath } from 'url'; 
+
+// --- KIỂM TRA CẤU HÌNH EMAIL ---
+if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.error("⚠️  CẢNH BÁO: Chưa cấu hình EMAIL_USER hoặc EMAIL_PASS trong file .env");
+    console.error("   -> Tính năng gửi mail OTP sẽ không hoạt động!");
+} else {
+    console.log(`✅ Cấu hình Email OK: ${process.env.EMAIL_USER}`);
+}
+// --------------------------------
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Cấu hình chính xác cho __dirname trong ES Module
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 app.use(express.json());
-app.use(cors()); // Cho phép CORS cơ bản
+app.use(cors()); 
 
 // Routes API
 router(app);
 
 // Cấu hình phục vụ Frontend (Deploy Monorepo)
-// Vì file index.js nằm trong folder /backend, nên cần lùi ra 1 cấp (../) để vào frontend
 app.use(express.static(path.join(__dirname, "../frontend/dist")));
 
 app.get("*", (req, res) => {
