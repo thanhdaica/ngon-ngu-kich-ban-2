@@ -1,10 +1,8 @@
 import {Toaster} from 'sonner';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-// 1. Import Layout (vỏ bọc)
 import MainLayout from './layouts/MainLayout'; 
 
-// 2. Import các trang (ruột)
 import HomePage from "./pages/HomePage";
 import NotFound from "./pages/NotFound";
 import CategoryDetailPage from './pages/CategoryDetailPage';
@@ -21,9 +19,7 @@ import AdminBookList from './pages/admin/AdminBookList';
 import AdminBookForm from './pages/admin/AdminBookForm';
 import AdminUserList from './pages/admin/AdminUserList';
 import PaymentStatusPage from './pages/PaymentStatusPage';
-import VerifyOtpPage from './pages/VerifyOtpPage';
-// (Bạn cũng cần import BookDetailPage khi tạo nó)
-
+// ĐÃ XÓA IMPORT VerifyOtpPage
 
 function App() {
 
@@ -34,54 +30,29 @@ function App() {
       <BrowserRouter> 
         <Routes>
           
-          {/* === 3. LOGIC SỬA ĐỔI NẰM Ở ĐÂY === */}
-
-          {/* A. Các trang CÔNG KHAI (có Header/Footer) */}
-          {/* Bọc các trang này trong MainLayout */}
           <Route element={<MainLayout />}>
-            <Route
-              path="/"
-              element={<HomePage />}
-            />
-            <Route
-              path="/category/:id"
-              element={<CategoryDetailPage />}
-            />
-            <Route 
-              path="/cart" 
-              element={<CartPage />} 
-            />
-            <Route 
-              path="/checkout" 
-              element={<CheckoutPage />} 
-            />
-            <Route path="/book/:id" 
-            element={<ProductDetailPage />} 
-            />
-            <Route path="/payment-status/:orderId" 
-            element={<PaymentStatusPage />} 
-            />
+            <Route path="/" element={<HomePage />} />
+            <Route path="/category/:id" element={<CategoryDetailPage />} />
+            <Route path="/cart" element={<CartPage />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
+            <Route path="/book/:id" element={<ProductDetailPage />} />
+            <Route path="/payment-status/:orderId" element={<PaymentStatusPage />} />
           </Route>
 
           <Route element={<AdminLayout />}>
              <Route path="/admin/dashboard" element={<AdminDashboard />} />
              <Route path="/admin/orders" element={<AdminOrderList />} /> 
-             {/* ROUTE CHI TIẾT ĐƠN HÀNG */}
              <Route path="/admin/order/:id" element={<AdminOrderDetail />} />
-             {/* ROUTE QUẢN LÝ SÁCH */}
              <Route path="/admin/books" element={<AdminBookList />} />
              <Route path="/admin/books/add" element={<AdminBookForm />} />
              <Route path="/admin/books/edit/:id" element={<AdminBookForm />} />
-             {/* ROUTE QUẢN LÝ NGƯỜI DÙNG */}
              <Route path="/admin/users" element={<AdminUserList />} />
-             {/* Thêm các trang quản lý khác vào đây: /admin/orders, /admin/books, ... */}
           </Route>
 
-          {/* B. Các trang RIÊNG (không có Header/Footer) */}
-          {/* Để các trang này bên ngoài MainLayout */}
-          <Route path="/verify-otp" element={<VerifyOtpPage />} />
+          {/* Các trang không có Header/Footer */}
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/login" element={<LoginPage />} />
+          {/* ĐÃ XÓA ROUTE /verify-otp */}
           <Route path="*" element={<NotFound />} /> 
           
         </Routes>

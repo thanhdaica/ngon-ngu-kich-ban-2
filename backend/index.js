@@ -6,14 +6,6 @@ import cors from 'cors';
 import path from "path";
 import { fileURLToPath } from 'url'; 
 
-// --- KIỂM TRA CẤU HÌNH EMAIL ---
-if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.error("⚠️  CẢNH BÁO: Chưa cấu hình EMAIL_USER hoặc EMAIL_PASS trong file .env");
-    console.error("   -> Tính năng gửi mail OTP sẽ không hoạt động!");
-} else {
-    console.log(`✅ Cấu hình Email OK: ${process.env.EMAIL_USER}`);
-}
-// --------------------------------
 
 const app = express();
 const PORT = process.env.PORT || 3000;

@@ -20,16 +20,10 @@ const userSchema = new mongoose.Schema({
         required: true,
         default: false 
     },
-    // --- THÊM CÁC TRƯỜNG CHO BẢO MẬT ---
+    // Mặc định là đã xác thực luôn
     isVerified: {
         type: Boolean,
-        default: false // Mặc định chưa xác thực
-    },
-    otp: {
-        type: String, // Lưu mã OTP
-    },
-    otpExpires: {
-        type: Date,   // Thời gian hết hạn OTP
+        default: true 
     }
 });
 
