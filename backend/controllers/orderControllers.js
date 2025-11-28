@@ -1,65 +1,64 @@
-// src/controllers/orderControllers.js (Phiên bản đã tối ưu)
+// src/controllers/orderControllers.js
 import Order from '../model/Order.js';
 import Book from '../model/Book.js'; 
-import Cart from '../model/Cart.js'; // <-- Cần để tìm giỏ hàng
+import Cart from '../model/Cart.js'; 
 
 class OrderController {
     // [POST] /api/order
     async addOrderItems(req, res) {
-        const userId = req.user._id; // Lấy ID User từ req.user (do protect gán)
-        const { shippingAddress, paymentMethod } = req.body;
+        const userId = req.user._id; 
+        // 1. NHẬN THÊM selectedItemIds TỪ BODY
+        const { shippingAddress, paymentMethod, selectedItemIds } = req.body;
         
-        // 1. KIỂM TRA: User đã gửi đủ thông tin cần thiết chưa
         if (!shippingAddress || !paymentMethod) {
              return res.status(400).json({ message: 'Vui lòng cung cấp đầy đủ thông tin giao hàng và phương thức thanh toán.' });
         }
 
+        // Kiểm tra xem có chọn sản phẩm nào không
+        if (!selectedItemIds || !Array.isArray(selectedItemIds) || selectedItemIds.length === 0) {
+            return res.status(400).json({ message: 'Vui lòng chọn ít nhất một sản phẩm để thanh toán.' });
+       }
+
         try {
             // 2. TÌM GIỎ HÀNG THỰC TẾ của user
-            // Populate để lấy thông tin chi tiết của sách (name, price, coverUrl)
             const cart = await Cart.findOne({ user: userId }).populate('items.product', 'name price coverUrl');
             
             if (!cart || cart.items.length === 0) {
                 return res.status(400).json({ message: 'Giỏ hàng của bạn đang trống.' });
             }
 
-            // 3. TÍNH TOÁN LẠI TỔNG TIỀN (VÀ LỌC SẢN PHẨM LỖI)
+            // 3. TÍNH TOÁN LẠI TỔNG TIỀN (CHỈ CÁC MÓN ĐƯỢC CHỌN)
             let itemsPrice = 0;
             const finalOrderItems = [];
             
             for (const item of cart.items) {
-                
-                // <== BỔ SUNG KIỂM TRA ĐIỀU KIỆN (FIX LỖI 500) ==>
-                if (!item.product || !item.product.price) {
-                    console.warn(`Sản phẩm trong giỏ hàng (ID: ${item.product?._id || 'Unknown'}) không tồn tại hoặc thiếu giá. Bỏ qua.`);
-                    continue; // Bỏ qua sản phẩm lỗi (Ghost Item)
+                // LOGIC QUAN TRỌNG: Chỉ xử lý nếu item này nằm trong danh sách được chọn
+                if (selectedItemIds.includes(item.product._id.toString())) {
+
+                    if (!item.product || !item.product.price) {
+                        continue; 
+                    }
+
+                    const price = item.product.price;
+                    const name = item.product.name;
+                    const coverUrl = item.product.coverUrl;
+                    
+                    itemsPrice += price * item.quantity;
+
+                    finalOrderItems.push({
+                        name,
+                        coverUrl,
+                        quantity: item.quantity,
+                        price,
+                        product: item.product._id 
+                    });
                 }
-                // <===========================================>
-
-                // Lấy giá và tên sách từ Object 'product' đã được populate
-                const price = item.product.price;
-                const name = item.product.name;
-                const coverUrl = item.product.coverUrl;
-                
-                // Tính tổng tiền
-                itemsPrice += price * item.quantity;
-
-                // Chuẩn bị item cho Order Model
-                finalOrderItems.push({
-                    name,
-                    coverUrl,
-                    quantity: item.quantity,
-                    price,
-                    product: item.product._id // ID sách
-                });
             }
 
-            // Kiểm tra nếu sau khi lọc, giỏ hàng không còn sản phẩm nào
             if (finalOrderItems.length === 0) {
-                 return res.status(400).json({ message: 'Giỏ hàng của bạn chỉ chứa các sản phẩm không còn tồn tại. Vui lòng cập nhật giỏ hàng.' });
+                 return res.status(400).json({ message: 'Sản phẩm bạn chọn không hợp lệ hoặc không tồn tại.' });
             }
 
-            // Giả định: Phí ship cố định
             const shippingPrice = 30000; 
             const totalPrice = itemsPrice + shippingPrice;
 
@@ -76,12 +75,14 @@ class OrderController {
 
             const createdOrder = await order.save();
             
-            // 5. XÓA GIỎ HÀNG (Sau khi tạo đơn thành công)
-            await Cart.deleteOne({ user: userId });
+            // 5. CẬP NHẬT LẠI GIỎ HÀNG (CHỈ XÓA MÓN ĐÃ MUA)
+            // Giữ lại những món KHÔNG nằm trong danh sách selectedItemIds
+            cart.items = cart.items.filter(item => !selectedItemIds.includes(item.product._id.toString()));
+            await cart.save();
             
             // 6. Trả về kết quả
             res.status(201).json({ 
-                message: 'Tạo đơn hàng và tiến hành thanh toán thành công!',
+                message: 'Tạo đơn hàng thành công!',
                 data: createdOrder 
             });
 
@@ -90,14 +91,13 @@ class OrderController {
             res.status(500).json({ message: 'Lỗi server khi tạo đơn hàng', error: error.message });
         }
     }
+    
     // [GET] /api/order/:id
-    // Hàm xem chi tiết một đơn hàng
     async getOrderById(req, res) {
         try {
             const order = await Order.findById(req.params.id).populate('user', 'name email');
 
             if (order) {
-                // Đảm bảo chỉ user sở hữu hoặc Admin mới xem được đơn hàng
                 if (order.user._id.toString() !== req.user._id.toString() && !req.user.isAdmin) {
                     return res.status(403).json({ message: "Bạn không có quyền xem đơn hàng này." });
                 }
@@ -109,16 +109,10 @@ class OrderController {
             res.status(500).json({ message: 'Lỗi server khi xem chi tiết đơn hàng', error: error.message });
         }
     }
-    /**
-     * [GET] /api/order/
-     * MỤC ĐÍCH: Lấy tất cả đơn hàng (Chỉ Admin)
-     */
+
     async getAllOrders(req, res) {
         try {
-            // Lấy tất cả đơn hàng và populate tên/email user
-            const orders = await Order.find({})
-                .populate('user', 'name email');
-
+            const orders = await Order.find({}).populate('user', 'name email');
             res.json(orders);
         } catch (error) {
             console.error('❌ Lỗi khi lấy tất cả đơn hàng:', error);

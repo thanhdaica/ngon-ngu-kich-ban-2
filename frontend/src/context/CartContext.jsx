@@ -1,14 +1,11 @@
-// Tạo file: src/context/CartContext.jsx
-
+// src/context/CartContext.jsx
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom'; // <-- Cần import useNavigate (dù hơi khác quy tắc hook)
 import { useAuth } from './AuthContext';
-// Tạo Context
+
 const CartContext = createContext();
 
-// Hàm lấy token (dùng chung)
 const getAuthConfig = () => {
   const token = localStorage.getItem('token');
   if (!token) return null;
@@ -17,17 +14,16 @@ const getAuthConfig = () => {
   };
 };
 
-// "Nhà cung cấp" (Provider)
 export function CartProvider({ children }) {
-  const [cart, setCart] = useState(null); // State chứa giỏ hàng { items: [...] }
+  const [cart, setCart] = useState(null); 
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
-  // 1. Tự động lấy giỏ hàng khi tải ứng dụng
+  // 1. Tự động lấy giỏ hàng
   useEffect(() => {
     const fetchCart = async () => {
       const config = getAuthConfig();
-      if (!config) { // Chưa đăng nhập
+      if (!config) { 
         setLoading(false);
         return; 
       }
@@ -41,9 +37,9 @@ export function CartProvider({ children }) {
       }
     };
     fetchCart();
-  }, []); // Chỉ chạy 1 lần
+  }, []);
 
-  // 2. Hàm THÊM vào giỏ (gọi từ ProductDetailPage)
+  // 2. Hàm THÊM vào giỏ
   const addToCart = async (productId, quantity) => {
     const config = getAuthConfig();
     if (!config) {
@@ -55,31 +51,28 @@ export function CartProvider({ children }) {
         { productId, quantity }, 
         config
       );
-      setCart(response.data); // Cập nhật state giỏ hàng
+      setCart(response.data); 
       toast.success("Đã thêm vào giỏ hàng!");
     } catch (error) {
       toast.error(error.response?.data?.message || "Lỗi khi thêm vào giỏ");
     }
   };
 
-  // 3. Hàm XÓA khỏi giỏ (gọi từ CartPage)
+  // 3. Hàm XÓA khỏi giỏ
   const removeFromCart = async (productId) => {
     const config = getAuthConfig();
     if (!config) return; 
     try {
       const response = await axios.delete(`/api/cart/${productId}`, config);
-      setCart(response.data); // Cập nhật state giỏ hàng
+      setCart(response.data); 
       toast.success("Đã xóa khỏi giỏ hàng.");
     } catch (error) {
       toast.error(error.response?.data?.message || "Lỗi khi xóa sản phẩm");
     }
   };
-// 4. hàm Tiến hành thanh toán 
 
-// 5.Hàm xử lý gọi API (gọi từ CheckoutPage)
-const handleCheckoutAPI = async (shippingAddress, paymentMethod) => {
-    // Logic API đã được sửa trong bước trước (trong phần trả lời trước)
-    // Tái tạo lại logic đó ở đây:
+  // 4. Hàm THANH TOÁN (UPDATED)
+  const handleCheckoutAPI = async (shippingAddress, paymentMethod, selectedItemIds) => {
     const config = getAuthConfig();
 
     if (!config || !user) {
@@ -87,7 +80,8 @@ const handleCheckoutAPI = async (shippingAddress, paymentMethod) => {
         return false;
     }
     
-    const checkoutData = { shippingAddress, paymentMethod };
+    // Gửi kèm danh sách ID sản phẩm được chọn
+    const checkoutData = { shippingAddress, paymentMethod, selectedItemIds };
 
     try {
         const response = await axios.post(
@@ -96,29 +90,29 @@ const handleCheckoutAPI = async (shippingAddress, paymentMethod) => {
             config
         );
         
-        const createdOrder = response.data.data;
-        setCart({ user: createdOrder.user, items: [] }); 
+        // Cập nhật lại giỏ hàng (Lấy dữ liệu mới nhất từ server sau khi server đã xóa item mua)
+        const newCartResponse = await axios.get('/api/cart', config);
+        setCart(newCartResponse.data);
         
         if (paymentMethod === 'COD') {
-            toast.success(`Đơn hàng #${createdOrder._id.substring(0, 8)} đã được tạo!`);
+            toast.success(`Đơn hàng #${response.data.data._id.substring(0, 8)} đã được tạo!`);
         }
         
-        return response.data; // <== TRẢ VỀ TOÀN BỘ DATA ĐƠN HÀNG
+        return response.data; 
     } catch (error) {
         console.error("Lỗi Thanh toán:", error);
         toast.error(error.response?.data?.message || "Lỗi khi tạo đơn hàng.");
-        return false; // Báo hiệu thất bại
+        return false; 
     }
-};
-  // 6. Cung cấp state và hàm
+  };
+
   return (
-    <CartContext.Provider value={{ cart, setCart, loading, addToCart, removeFromCart,handleCheckoutAPI }}>
+    <CartContext.Provider value={{ cart, setCart, loading, addToCart, removeFromCart, handleCheckoutAPI }}>
       {children}
     </CartContext.Provider>
   );
 }
 
-//  Hook (để dễ sử dụng)
 export const useCart = () => {
   return useContext(CartContext);
 };
