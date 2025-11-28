@@ -5,7 +5,7 @@ const sendEmail = async (email, subject, text) => {
         const transporter = nodemailer.createTransport({
             host: "smtp.gmail.com",
             port: 587,
-            secure: false, // TLS yêu cầu secure: false
+            secure: false, 
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS,
@@ -13,17 +13,18 @@ const sendEmail = async (email, subject, text) => {
             tls: {
                 rejectUnauthorized: false
             },
-            // --- THÊM DÒNG NÀY ĐỂ FIX LỖI TIMEOUT ---
-            family: 4, // Ép buộc sử dụng IPv4
+            family: 4, // Ép buộc dùng IPv4 để tránh lỗi mạng
+            // --- THÊM CẤU HÌNH TIMEOUT ĐỂ TRÁNH TREO APP ---
+            connectionTimeout: 10000, // 10 giây không kết nối được thì hủy
+            greetingTimeout: 5000,    // 5 giây không chào hỏi được thì hủy
+            socketTimeout: 10000,     // 10 giây không gửi được dữ liệu thì hủy
         });
 
-        console.log("⏳ Đang kết nối tới Gmail SMTP (IPv4)...");
-        
-        // Verify kết nối
-        await transporter.verify();
-        console.log("✅ Kết nối SMTP thành công!");
+        console.log(`⏳ Đang gửi email tới: ${email}...`);
 
-        // Gửi mail
+        // BỎ QUA transporter.verify() vì nó hay gây treo trên Render
+        
+        // Gửi mail luôn
         const info = await transporter.sendMail({
             from: `"Shop Sách 3 Anh Em" <${process.env.EMAIL_USER}>`,
             to: email,
@@ -31,13 +32,13 @@ const sendEmail = async (email, subject, text) => {
             text: text,
         });
 
-        console.log(`📧 Email đã gửi thành công đến: ${email}`);
-        console.log("Message ID:", info.messageId);
+        console.log(`✅ Email đã gửi thành công! ID: ${info.messageId}`);
         return true;
 
     } catch (error) {
         console.error("❌ Gửi email thất bại. Chi tiết lỗi:");
-        console.error(error);
+        // In lỗi gọn gàng hơn để dễ đọc
+        console.error(error.message || error); 
         return false;
     }
 };
