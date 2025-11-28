@@ -5,34 +5,26 @@ const sendEmail = async (email, subject, text) => {
         const transporter = nodemailer.createTransport({
             host: "smtp.gmail.com",
             port: 465,
-            secure: true,
+            secure: true, // Dùng SSL (quan trọng khi dùng port 465)
             auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
+                user: process.env.EMAIL_USER, // Email của bạn (ví dụ: shopsach@gmail.com)
+                pass: process.env.EMAIL_PASS, // Mật khẩu ứng dụng (App Password)
             },
+            connectionTimeout: 10000,
         });
+        
 
-        // 1. Kiểm tra kết nối SMTP xem user/pass có đúng không
-        await transporter.verify(); 
-        console.log("✅ Kết nối SMTP thành công. Đang gửi mail...");
-
-        // 2. Gửi mail
-        const info = await transporter.sendMail({
-            from: `"Shop Sách 3 Anh Em" <${process.env.EMAIL_USER}>`, // Thêm tên hiển thị cho uy tín
+        await transporter.sendMail({
+            from: process.env.EMAIL_USER,
             to: email,
             subject: subject,
-            text: text, 
-            // html: `<b>${text}</b>`, // Nếu muốn gửi HTML
+            text: text,
         });
 
-        console.log("📧 Email sent successfully!");
-        console.log("Message ID:", info.messageId); // In ra ID của mail để tra soát
-        return true;
-
+        console.log("Email sent successfully");
     } catch (error) {
-        console.error("❌ Email not sent. Error details:");
-        console.error(error); // In chi tiết lỗi
-        return false;
+        console.log("Email not sent", error);
+        // Không throw error để tránh crash app, chỉ log lỗi
     }
 };
 
