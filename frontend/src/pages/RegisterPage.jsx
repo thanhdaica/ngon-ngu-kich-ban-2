@@ -135,7 +135,7 @@ export default function RegisterPage() {
             {/* 5. PHẦN HIỂN THỊ CAPTCHA */}
             <div className="flex justify-center my-4">
                 <ReCAPTCHA
-                    sitekey="6LfzExssAAAAANFDc43OP_lfEKpT-KJiCoG_66KX" 
+                    sitekey="6LfzExssAAAABM6y5HPfVIO0u3sqDZc8BzG8mUM" 
                     onChange={(token) => setCaptchaToken(token)}
                 />
             </div>
