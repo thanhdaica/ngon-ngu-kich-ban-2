@@ -2,19 +2,25 @@ import nodemailer from 'nodemailer';
 
 const sendEmail = async (email, subject, text) => {
     try {
-        // Sử dụng 'service: gmail' để Nodemailer tự động cấu hình port/host chuẩn nhất
         const transporter = nodemailer.createTransport({
-            service: 'gmail', 
+            host: "smtp-mail.outlook.com", // Dùng Host của Outlook
+            port: 587,
+            secure: false, // Outlook dùng port 587 với secure: false
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS,
             },
-            // Thêm timeout để tránh bị treo server
-            connectionTimeout: 10000, 
+            tls: {
+                ciphers: 'SSLv3',
+                rejectUnauthorized: false // Bỏ qua lỗi chứng chỉ nếu có
+            },
+            // Tăng thời gian chờ để không bị ngắt kết nối sớm
+            connectionTimeout: 10000,
             greetingTimeout: 5000,
+            socketTimeout: 10000,
         });
 
-        console.log(`⏳ Đang gửi email tới: ${email}...`);
+        console.log(`⏳ Đang gửi email tới: ${email} qua Outlook...`);
 
         const info = await transporter.sendMail({
             from: `"Shop Sách 3 Anh Em" <${process.env.EMAIL_USER}>`,
@@ -28,7 +34,7 @@ const sendEmail = async (email, subject, text) => {
 
     } catch (error) {
         console.error("❌ Gửi email thất bại. Chi tiết lỗi:");
-        console.error(error.message || error); // Log message lỗi cho gọn
+        console.error(error.message || error);
         return false;
     }
 };
