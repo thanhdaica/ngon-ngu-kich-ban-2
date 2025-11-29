@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import sendEmail from '../utils/sendEmail.js';
-import crypto from 'crypto'; // 1. Import thư viện Crypto có sẵn của Node.js
+import crypto from 'crypto'; // Import thư viện Crypto
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
@@ -11,18 +11,16 @@ const generateToken = (id) => {
 
 class UserController {
 
-    // --- 1. ĐĂNG KÝ (TẠO OTP ĐỘNG) ---
+    // --- 1. ĐĂNG KÝ (TẠO OTP ĐỘNG & CHẾ ĐỘ DEMO) ---
     async register(req, res) {
         try {
             const { name, email, password, captchaToken, honeypot } = req.body;
 
-            // A. Check Honeypot (Chặn Bot)
+            // A. Check Honeypot & Captcha
             if (honeypot) {
                 console.warn("Bot detected via Honeypot!");
                 return res.status(400).json({ message: "Phát hiện Bot" });
             }
-
-            // B. Check Captcha (Chống Spam request)
             if (!captchaToken) {
                 return res.status(400).json({ message: "Vui lòng xác thực Captcha" });
             }
@@ -32,20 +30,18 @@ class UserController {
                  return res.status(400).json({ message: "Captcha không hợp lệ." });
             }
 
-            // C. Kiểm tra User tồn tại
+            // C. Kiểm tra User tồn tại và xóa User chưa xác thực
             const userExists = await User.findOne({ email: email.toLowerCase() });
             if (userExists) {
                 if (!userExists.isVerified) {
-                     // Nếu chưa xác thực -> Xóa user cũ để tạo lại (ghi đè OTP mới)
+                     // Nếu chưa xác thực -> Xóa user cũ để tạo lại OTP mới
                      await User.deleteOne({ email: email.toLowerCase() });
                 } else {
                      return res.status(400).json({ message: "Email đã được sử dụng" });
                 }
             }
             
-            // --- D. SINH MÃ OTP NGẪU NHIÊN (BẢO MẬT) ---
-            // Sử dụng crypto.randomInt để tạo số ngẫu nhiên an toàn mật mã học
-            // Tạo số từ 100000 đến 999999
+            // D. SINH MÃ OTP NGẪU NHIÊN (BẢO MẬT)
             const otpCode = crypto.randomInt(100000, 999999).toString();
 
             const salt = await bcrypt.genSalt(10);
@@ -56,27 +52,37 @@ class UserController {
                 name,
                 email: email.toLowerCase(),
                 password: hashedPassword,
-                isVerified: false, 
-                otp: otpCode,
-                otpExpires: Date.now() + 10 * 60 * 1000 
+                isVerified: false, // Bắt buộc false
+                otp: otpCode,      
+                otpExpires: Date.now() + 10 * 60 * 1000 // 10 phút
             });
 
-            // F. Gửi Email (Bọc trong try-catch riêng hoặc để catch tổng xử lý)
+            // F. GỬI EMAIL VÀ XỬ LÝ LỖI MẠNG (CHẾ ĐỘ DEMO)
             try {
                 const subject = "Mã xác thực (OTP) - Web Sách 3 Anh Em";
                 const text = `Xin chào ${name},\n\nMã OTP của bạn là: ${otpCode}`;
                 
-                await sendEmail(email, subject, text); // Nếu lỗi, nó sẽ nhảy xuống catch
+                // Thử gửi mail
+                await sendEmail(email, subject, text); 
 
+                // Nếu gửi được (trên local/server không bị chặn)
                 res.status(201).json({
                     message: "Đăng ký thành công! Vui lòng kiểm tra Email.",
-                    email: email 
+                    email: newUser.email 
                 });
+
             } catch (emailError) {
-                // Nếu gửi mail lỗi -> Xóa user vừa tạo để tránh rác DB
-                await User.findByIdAndDelete(newUser._id);
-                console.error("Gửi mail thất bại, đã rollback user:", emailError);
-                return res.status(500).json({ message: "Lỗi gửi email xác thực. Vui lòng thử lại sau." });
+                // --- KHI GỬI MAIL THẤT BẠI (RENDER BLOCK) ---
+                console.error("====================================================");
+                console.error("⚠️ LỖI GỬI MAIL (RENDER BLOCK). CHẾ ĐỘ DEMO ĐÃ BẬT.");
+                console.error(`🔑 [OTP DEMO]: ${otpCode}`); // IN OTP RA LOG SERVER
+                console.error("====================================================");
+                
+                // Báo thành công cho Frontend để chuyển trang (Không xóa user vừa tạo)
+                res.status(201).json({
+                    message: "Tài khoản đã tạo. (Xem Log Server để lấy OTP Demo)",
+                    email: newUser.email 
+                });
             }
 
         } catch (error) {
@@ -100,21 +106,19 @@ class UserController {
                 return res.status(400).json({ message: "Tài khoản này đã được xác thực rồi." });
             }
 
-            // --- KIỂM TRA MÃ OTP ---
-            // So sánh chính xác mã user nhập với mã trong DB
-            // ĐÃ XÓA logic "|| otp === 123456"
+            // KIỂM TRA MÃ OTP
             if (user.otp !== otp) {
                 return res.status(400).json({ message: "Mã OTP không chính xác!" });
             }
 
-            // --- KIỂM TRA THỜI GIAN ---
+            // KIỂM TRA THỜI GIAN
             if (user.otpExpires < Date.now()) {
                 return res.status(400).json({ message: "Mã OTP đã hết hạn. Vui lòng đăng ký lại." });
             }
 
-            // --- XÁC THỰC THÀNH CÔNG ---
+            // XÁC THỰC THÀNH CÔNG
             user.isVerified = true;
-            user.otp = undefined;       // Xóa OTP ngay lập tức để không thể dùng lại (Replay Attack Protection)
+            user.otp = undefined;       // Xóa OTP
             user.otpExpires = undefined;
             await user.save();
 
@@ -132,7 +136,7 @@ class UserController {
         }
     }
 
-    // 3. LOGIN (Phải check đã xác thực chưa)
+    // --- 3. LOGIN (Phải check đã xác thực chưa) ---
     async login(req, res) {
         try {
             const { email, password } = req.body;
@@ -160,9 +164,8 @@ class UserController {
         }
     }
 
-    // ... (Giữ nguyên các hàm profile, updateProfile, index...) ...
+    // --- CÁC HÀM KHÁC GIỮ NGUYÊN ---
     async getMyProfile(req, res) {
-        // ... (Code cũ của bạn)
         const user = {
             _id: req.user._id,
             name: req.user.name,
@@ -173,7 +176,6 @@ class UserController {
     }
     
     async updateMyProfile(req, res) {
-         // ... (Code cũ của bạn)
          try {
             const user = await User.findById(req.user._id);
             if (user) {
@@ -198,7 +200,6 @@ class UserController {
     }
 
     async index(req, res) {
-         // ... (Code cũ của bạn)
          try {
             const users = await User.find({}).select('-password');
             res.json(users);
@@ -208,7 +209,6 @@ class UserController {
     }
 
     async promoteToAdmin(req, res) {
-         // ... (Code cũ của bạn)
          const { id } = req.params;
         const { isAdmin } = req.body; 
         if (req.user._id.toString() === id) {
