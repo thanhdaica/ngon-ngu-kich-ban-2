@@ -17,13 +17,23 @@ const userSchema = new mongoose.Schema({
     },
     isAdmin: { 
         type: Boolean,
-        required: true,
         default: false 
     },
-    // Mặc định là đã xác thực luôn
+
+    // --- QUAN TRỌNG: Mặc định phải là false ---
     isVerified: {
         type: Boolean,
-        default: true 
+        default: false 
+    },
+
+    // --- Thêm 2 trường bị thiếu ---
+    otp: {
+        type: String,
+        required: false
+    },
+    otpExpires: {
+        type: Number,
+        required: false
     }
 });
 
