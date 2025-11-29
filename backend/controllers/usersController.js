@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import sendEmail from '../utils/sendEmail.js';
-import crypto from 'crypto'; // Import thư viện Crypto
+import crypto from 'crypto'; 
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
@@ -13,10 +13,10 @@ class UserController {
 
     // --- 1. ĐĂNG KÝ (TẠO OTP ĐỘNG & CHẾ ĐỘ DEMO) ---
     async register(req, res) {
-        try {
+        try { // Khối try bao ngoài cùng
             const { name, email, password, captchaToken, honeypot } = req.body;
 
-            // A. Check Honeypot & Captcha
+            // A. Check Honeypot & Captcha (GIỮ NGUYÊN)
             if (honeypot) {
                 console.warn("Bot detected via Honeypot!");
                 return res.status(400).json({ message: "Phát hiện Bot" });
@@ -30,66 +30,66 @@ class UserController {
                  return res.status(400).json({ message: "Captcha không hợp lệ." });
             }
 
-            // C. Kiểm tra User tồn tại và xóa User chưa xác thực
+            // C. Kiểm tra User tồn tại và XÓA user cũ nếu chưa xác thực
             const userExists = await User.findOne({ email: email.toLowerCase() });
             if (userExists) {
                 if (!userExists.isVerified) {
-                     // Nếu chưa xác thực -> Xóa user cũ để tạo lại OTP mới
+                     // Xóa user cũ để tạo mới OTP (Đảm bảo clean slate)
                      await User.deleteOne({ email: email.toLowerCase() });
                 } else {
                      return res.status(400).json({ message: "Email đã được sử dụng" });
                 }
             }
             
-            // D. SINH MÃ OTP NGẪU NHIÊN (BẢO MẬT)
+            // D. SINH MÃ OTP NGẪU NHIÊN
             const otpCode = crypto.randomInt(100000, 999999).toString();
 
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(password, salt);
 
-            // E. Lưu User + OTP vào DB
+            // E. LƯU USER MỚI + OTP vào DB
             const newUser = await User.create({
                 name,
                 email: email.toLowerCase(),
                 password: hashedPassword,
-                isVerified: false, // Bắt buộc false
+                isVerified: false, 
                 otp: otpCode,      
-                otpExpires: Date.now() + 10 * 60 * 1000 // 10 phút
+                otpExpires: Date.now() + 10 * 60 * 1000 
             });
 
             // F. GỬI EMAIL VÀ XỬ LÝ LỖI MẠNG (CHẾ ĐỘ DEMO)
             try {
                 const subject = "Mã xác thực (OTP) - Web Sách 3 Anh Em";
-                const text = `Xin chào ${name},\n\nMã OTP của bạn là: ${otpCode}`;
+                const text = `Mã OTP của bạn là: ${otpCode}`;
                 
-                // Thử gửi mail
                 await sendEmail(email, subject, text); 
 
-                // Nếu gửi được (trên local/server không bị chặn)
                 res.status(201).json({
-                    message: "Đăng ký thành công! Vui lòng kiểm tra Email.",
+                    message: "Đã gửi mã OTP về Email. Vui lòng kiểm tra.",
                     email: newUser.email 
                 });
 
             } catch (emailError) {
-                // --- KHI GỬI MAIL THẤT BẠI (RENDER BLOCK) ---
+                // LỖI MẠNG RENDER: BÁO VỀ VÀ IN LOG
                 console.error("====================================================");
                 console.error("⚠️ LỖI GỬI MAIL (RENDER BLOCK). CHẾ ĐỘ DEMO ĐÃ BẬT.");
-                console.error(`🔑 [OTP DEMO]: ${otpCode}`); // IN OTP RA LOG SERVER
+                console.error(`🔑 [OTP DEMO]: ${otpCode}`); 
                 console.error("====================================================");
                 
-                // Báo thành công cho Frontend để chuyển trang (Không xóa user vừa tạo)
+                // Báo thành công cho Frontend để chuyển trang
                 res.status(201).json({
-                    message: "Tài khoản đã tạo. (Xem Log Server để lấy OTP Demo)",
+                    message: "Tài khoản đã tạo. Lỗi gửi mail. (Xem Log Server để lấy OTP Demo)",
                     email: newUser.email 
                 });
             }
 
         } catch (error) {
             console.error(error);
+            // Lỗi DB hoặc lỗi logic khác
             res.status(500).json({ message: "Lỗi Server", error: error.message });
         }
     }
+
 
     // --- 2. XÁC THỰC OTP (KIỂM TRA CHẶT CHẼ) ---
     async verifyOTP(req, res) {
@@ -118,7 +118,7 @@ class UserController {
 
             // XÁC THỰC THÀNH CÔNG
             user.isVerified = true;
-            user.otp = undefined;       // Xóa OTP
+            user.otp = undefined;       
             user.otpExpires = undefined;
             await user.save();
 
@@ -164,7 +164,7 @@ class UserController {
         }
     }
 
-    // --- CÁC HÀM KHÁC GIỮ NGUYÊN ---
+    // --- CÁC HÀM KHÁC GIỮ NGUYÊN (getMyProfile, updateMyProfile, index, promoteToAdmin) ---
     async getMyProfile(req, res) {
         const user = {
             _id: req.user._id,
