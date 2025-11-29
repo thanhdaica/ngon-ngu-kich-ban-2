@@ -13,10 +13,10 @@ class UserController {
 
     // --- 1. ĐĂNG KÝ (TẠO OTP ĐỘNG & CHẾ ĐỘ DEMO) ---
     async register(req, res) {
-        try { // Khối try bao ngoài cùng
+        try {
             const { name, email, password, captchaToken, honeypot } = req.body;
 
-            // A. Check Honeypot & Captcha (GIỮ NGUYÊN)
+            // A. Check Honeypot & Captcha
             if (honeypot) {
                 console.warn("Bot detected via Honeypot!");
                 return res.status(400).json({ message: "Phát hiện Bot" });
@@ -30,11 +30,11 @@ class UserController {
                  return res.status(400).json({ message: "Captcha không hợp lệ." });
             }
 
-            // C. Kiểm tra User tồn tại và XÓA user cũ nếu chưa xác thực
+            // C. Kiểm tra User tồn tại
             const userExists = await User.findOne({ email: email.toLowerCase() });
             if (userExists) {
                 if (!userExists.isVerified) {
-                     // Xóa user cũ để tạo mới OTP (Đảm bảo clean slate)
+                     // Xóa user cũ để tạo OTP mới
                      await User.deleteOne({ email: email.toLowerCase() });
                 } else {
                      return res.status(400).json({ message: "Email đã được sử dụng" });
@@ -47,26 +47,26 @@ class UserController {
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(password, salt);
 
-            // E. LƯU USER MỚI + OTP vào DB
+            // E. Lưu User + OTP vào DB
             const newUser = await User.create({
                 name,
                 email: email.toLowerCase(),
                 password: hashedPassword,
                 isVerified: false, 
-                otp: otpCode,      
+                otp: otpCode,
                 otpExpires: Date.now() + 10 * 60 * 1000 
             });
 
             // F. GỬI EMAIL VÀ XỬ LÝ LỖI MẠNG (CHẾ ĐỘ DEMO)
             try {
                 const subject = "Mã xác thực (OTP) - Web Sách 3 Anh Em";
-                const text = `Mã OTP của bạn là: ${otpCode}`;
+                const text = `Xin chào ${name},\n\nMã OTP của bạn là: ${otpCode}`;
                 
                 await sendEmail(email, subject, text); 
 
                 res.status(201).json({
-                    message: "Đã gửi mã OTP về Email. Vui lòng kiểm tra.",
-                    email: newUser.email 
+                    message: "Đăng ký thành công! Vui lòng kiểm tra Email.",
+                    email: newUser.email // Sửa lại thành newUser.email
                 });
 
             } catch (emailError) {
@@ -76,22 +76,21 @@ class UserController {
                 console.error(`🔑 [OTP DEMO]: ${otpCode}`); 
                 console.error("====================================================");
                 
-                // Báo thành công cho Frontend để chuyển trang
                 res.status(201).json({
                     message: "Tài khoản đã tạo. Lỗi gửi mail. (Xem Log Server để lấy OTP Demo)",
-                    email: newUser.email 
+                    email: newUser.email // Bắt buộc truyền email
                 });
             }
 
         } catch (error) {
+             // Catch lỗi chung (DB/hashing/etc.)
             console.error(error);
-            // Lỗi DB hoặc lỗi logic khác
             res.status(500).json({ message: "Lỗi Server", error: error.message });
         }
     }
 
 
-    // --- 2. XÁC THỰC OTP (KIỂM TRA CHẶT CHẼ) ---
+    // --- 2. XÁC THỰC OTP (ĐÃ FIX LỖI SO SÁNH) ---
     async verifyOTP(req, res) {
         try {
             const { email, otp } = req.body;
@@ -106,17 +105,18 @@ class UserController {
                 return res.status(400).json({ message: "Tài khoản này đã được xác thực rồi." });
             }
 
-            // KIỂM TRA MÃ OTP
-            if (user.otp !== otp) {
+            // --- KIỂM TRA MÃ OTP (THE CRITICAL FIX) ---
+            // Ép cả hai giá trị về String để so sánh an toàn
+            if (String(user.otp) !== String(otp)) { 
                 return res.status(400).json({ message: "Mã OTP không chính xác!" });
             }
 
-            // KIỂM TRA THỜI GIAN
+            // --- KIỂM TRA THỜI GIAN ---
             if (user.otpExpires < Date.now()) {
                 return res.status(400).json({ message: "Mã OTP đã hết hạn. Vui lòng đăng ký lại." });
             }
 
-            // XÁC THỰC THÀNH CÔNG
+            // --- XÁC THỰC THÀNH CÔNG ---
             user.isVerified = true;
             user.otp = undefined;       
             user.otpExpires = undefined;
@@ -164,7 +164,7 @@ class UserController {
         }
     }
 
-    // --- CÁC HÀM KHÁC GIỮ NGUYÊN (getMyProfile, updateMyProfile, index, promoteToAdmin) ---
+    // --- CÁC HÀM KHÁC GIỮ NGUYÊN ---
     async getMyProfile(req, res) {
         const user = {
             _id: req.user._id,
