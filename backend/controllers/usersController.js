@@ -90,12 +90,12 @@ class UserController {
     }
 
 
-    // --- 2. XÁC THỰC OTP (ĐÃ FIX LỖI SO SÁNH) ---
-    // --- 2. XÁC THỰC OTP (ĐÃ FIX LỖI SO SÁNH CUỐI CÙNG) ---
+    // --- 2. XÁC THỰC OTP (BẢN FIX CUỐI CÙNG CHO LỖI SO SÁNH) ---
     async verifyOTP(req, res) {
         try {
             const { email, otp } = req.body;
             
+            // Tìm user theo email
             const user = await User.findOne({ email: email.toLowerCase() });
 
             if (!user) {
@@ -106,9 +106,9 @@ class UserController {
                 return res.status(400).json({ message: "Tài khoản này đã được xác thực rồi." });
             }
 
-            // --- FIX LỖI NGHIÊM NGẶT TẠI ĐÂY ---
-            // Ép user.otp và otp về cùng kiểu String để so sánh
-            if (String(user.otp) !== String(otp)) { // <-- ĐÃ SỬA: Dùng String() để đảm bảo
+            // --- KIỂM TRA MÃ OTP (FIX LỖI KIỂU DỮ LIỆU) ---
+            // Ép cả hai giá trị về String để so sánh an toàn, loại bỏ lỗi Mongoose/JavaScript
+            if (String(user.otp) !== String(otp)) { 
                 return res.status(400).json({ message: "Mã OTP không chính xác!" });
             }
 
