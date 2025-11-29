@@ -19,6 +19,7 @@ import AdminBookList from './pages/admin/AdminBookList';
 import AdminBookForm from './pages/admin/AdminBookForm';
 import AdminUserList from './pages/admin/AdminUserList';
 import PaymentStatusPage from './pages/PaymentStatusPage';
+import VerifyOtpPage from './pages/VerifyOtpPage';
 // ĐÃ XÓA IMPORT VerifyOtpPage
 
 function App() {
@@ -52,7 +53,7 @@ function App() {
           {/* Các trang không có Header/Footer */}
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/login" element={<LoginPage />} />
-          {/* ĐÃ XÓA ROUTE /verify-otp */}
+          <Route path="/verify-otp" element={<VerifyOtpPage />} />
           <Route path="*" element={<NotFound />} /> 
           
         </Routes>

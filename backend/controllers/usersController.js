@@ -2,6 +2,8 @@ import User from '../model/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
+import sendEmail from '../utils/sendEmail.js';
+import crypto from 'crypto'; // 1. Import thư viện Crypto có sẵn của Node.js
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
@@ -9,66 +11,133 @@ const generateToken = (id) => {
 
 class UserController {
 
-    // 1. ĐĂNG KÝ (CÓ CHECK CAPTCHA)
+    // --- 1. ĐĂNG KÝ (TẠO OTP ĐỘNG) ---
     async register(req, res) {
         try {
-            // 2. Lấy thêm captchaToken từ body
-            const { name, email, password, captchaToken } = req.body;
-            
-            // --- BẮT ĐẦU LOGIC CHECK CAPTCHA ---
+            const { name, email, password, captchaToken, honeypot } = req.body;
+
+            // A. Check Honeypot (Chặn Bot)
+            if (honeypot) {
+                console.warn("Bot detected via Honeypot!");
+                return res.status(400).json({ message: "Phát hiện Bot" });
+            }
+
+            // B. Check Captcha (Chống Spam request)
             if (!captchaToken) {
                 return res.status(400).json({ message: "Vui lòng xác thực Captcha" });
             }
-
-            // Gọi sang Google để kiểm tra token
             const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`;
-            
             const googleResponse = await axios.post(verifyUrl);
-            const { success } = googleResponse.data;
-
-            if (!success) {
-                 return res.status(400).json({ message: "Xác thực người máy thất bại. Vui lòng thử lại." });
+            if (!googleResponse.data.success) {
+                 return res.status(400).json({ message: "Captcha không hợp lệ." });
             }
-            // --- KẾT THÚC LOGIC CHECK CAPTCHA ---
 
-
-            // ... (Phần logic kiểm tra User cũ và tạo User mới GIỮ NGUYÊN như code bạn đang có) ...
+            // C. Kiểm tra User tồn tại
             const userExists = await User.findOne({ email: email.toLowerCase() });
             if (userExists) {
-                return res.status(400).json({ message: "Email đã được sử dụng" });
+                if (!userExists.isVerified) {
+                     // Nếu chưa xác thực -> Xóa user cũ để tạo lại (ghi đè OTP mới)
+                     await User.deleteOne({ email: email.toLowerCase() });
+                } else {
+                     return res.status(400).json({ message: "Email đã được sử dụng" });
+                }
             }
             
+            // --- D. SINH MÃ OTP NGẪU NHIÊN (BẢO MẬT) ---
+            // Sử dụng crypto.randomInt để tạo số ngẫu nhiên an toàn mật mã học
+            // Tạo số từ 100000 đến 999999
+            const otpCode = crypto.randomInt(100000, 999999).toString();
+
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(password, salt);
 
-            const user = await User.create({
+            // E. Lưu User + OTP vào DB
+            await User.create({
                 name,
                 email: email.toLowerCase(),
                 password: hashedPassword,
-                isVerified: true // Vì đã bỏ OTP nên set luôn là true
+                isVerified: false, // Bắt buộc false
+                otp: otpCode,      // Lưu OTP vừa sinh ra
+                otpExpires: Date.now() + 10 * 60 * 1000 // Hết hạn sau 10 phút
             });
 
-            if (user) {
-                res.status(201).json({
-                    message: "Đăng ký thành công! Bạn có thể đăng nhập ngay."
-                });
-            } else {
-                res.status(400).json({ message: "Dữ liệu không hợp lệ" });
-            }
+            // F. Gửi Email chứa OTP thật
+            const subject = "Mã xác thực (OTP) - Web Sách 3 Anh Em";
+            const text = `Xin chào ${name},\n\nMã xác thực bảo mật của bạn là: ${otpCode}\n\nMã này chỉ có hiệu lực trong 10 phút. Tuyệt đối không chia sẻ mã này cho ai.`;
+            
+            await sendEmail(email, subject, text);
+
+            res.status(201).json({
+                message: "Mã OTP đã được gửi đến Email của bạn. Vui lòng kiểm tra.",
+                email: email 
+            });
 
         } catch (error) {
             console.error(error);
-            res.status(500).json({ message: "Lỗi đăng ký server", error: error.message });
+            res.status(500).json({ message: "Lỗi Server", error: error.message });
         }
     }
 
-    // 2. ĐĂNG NHẬP (Đã bỏ check xác thực)
+    // --- 2. XÁC THỰC OTP (KIỂM TRA CHẶT CHẼ) ---
+    async verifyOTP(req, res) {
+        try {
+            const { email, otp } = req.body;
+            
+            const user = await User.findOne({ email: email.toLowerCase() });
+
+            if (!user) {
+                return res.status(400).json({ message: "Người dùng không tồn tại" });
+            }
+
+            if (user.isVerified) {
+                return res.status(400).json({ message: "Tài khoản này đã được xác thực rồi." });
+            }
+
+            // --- KIỂM TRA MÃ OTP ---
+            // So sánh chính xác mã user nhập với mã trong DB
+            // ĐÃ XÓA logic "|| otp === 123456"
+            if (user.otp !== otp) {
+                return res.status(400).json({ message: "Mã OTP không chính xác!" });
+            }
+
+            // --- KIỂM TRA THỜI GIAN ---
+            if (user.otpExpires < Date.now()) {
+                return res.status(400).json({ message: "Mã OTP đã hết hạn. Vui lòng đăng ký lại." });
+            }
+
+            // --- XÁC THỰC THÀNH CÔNG ---
+            user.isVerified = true;
+            user.otp = undefined;       // Xóa OTP ngay lập tức để không thể dùng lại (Replay Attack Protection)
+            user.otpExpires = undefined;
+            await user.save();
+
+            res.json({
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                isAdmin: user.isAdmin,
+                token: generateToken(user._id),
+                message: "Xác thực thành công!"
+            });
+
+        } catch (error) {
+            res.status(500).json({ message: "Lỗi xác thực", error: error.message });
+        }
+    }
+
+    // 3. LOGIN (Phải check đã xác thực chưa)
     async login(req, res) {
         try {
             const { email, password } = req.body;
             const user = await User.findOne({ email: email.toLowerCase() });
 
             if (user && (await bcrypt.compare(password, user.password))) {
+                
+                // Chặn nếu chưa verify OTP
+                if (!user.isVerified) {
+                    return res.status(401).json({ message: "Tài khoản chưa xác thực. Vui lòng kiểm tra email để lấy OTP." });
+                }
+
                 res.json({
                     _id: user._id,
                     name: user.name,
@@ -84,8 +153,9 @@ class UserController {
         }
     }
 
-    // ... (Giữ nguyên các hàm getMyProfile, updateMyProfile, index, promoteToAdmin) ...
+    // ... (Giữ nguyên các hàm profile, updateProfile, index...) ...
     async getMyProfile(req, res) {
+        // ... (Code cũ của bạn)
         const user = {
             _id: req.user._id,
             name: req.user.name,
@@ -94,8 +164,10 @@ class UserController {
         };
         res.json(user);
     }
+    
     async updateMyProfile(req, res) {
-        try {
+         // ... (Code cũ của bạn)
+         try {
             const user = await User.findById(req.user._id);
             if (user) {
                 user.name = req.body.name || user.name;
@@ -117,16 +189,20 @@ class UserController {
             res.status(400).json({ message: "Lỗi cập nhật thông tin", error: error.message });
         }
     }
+
     async index(req, res) {
-        try {
+         // ... (Code cũ của bạn)
+         try {
             const users = await User.find({}).select('-password');
             res.json(users);
         } catch (error) {
             res.status(500).json({ message: "Lỗi lấy danh sách người dùng", error: error.message });
         }
     }
+
     async promoteToAdmin(req, res) {
-        const { id } = req.params;
+         // ... (Code cũ của bạn)
+         const { id } = req.params;
         const { isAdmin } = req.body; 
         if (req.user._id.toString() === id) {
              return res.status(400).json({ message: 'Không thể tự thay đổi quyền của bản thân' });

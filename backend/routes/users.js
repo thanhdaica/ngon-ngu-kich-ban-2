@@ -10,7 +10,7 @@ const userscontroller = new UsersController();
 routerUsers.post('/register', (req, res) => userscontroller.register(req, res));
 
 // ĐÃ XÓA ROUTE /verify
-
+routerUsers.post('/verify', (req, res) => userscontroller.verifyOTP(req, res));
 // POST /api/user/login (Công khai)
 routerUsers.post('/login', (req, res) => userscontroller.login(req, res));
 

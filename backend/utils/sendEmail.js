@@ -1,42 +1,28 @@
+// backend/utils/sendEmail.js
 import nodemailer from 'nodemailer';
 
 const sendEmail = async (email, subject, text) => {
     try {
         const transporter = nodemailer.createTransport({
-            host: "smtp.office365.com", // Đổi sang host chuẩn này của Microsoft
-            port: 587,
-            secure: false, // STARTTLS
+            service: 'gmail', // <--- Sửa thành 'gmail' cho gọn, không cần điền host/port
             auth: {
-                user: process.env.EMAIL_USER, // Email Outlook của bạn
-                pass: process.env.EMAIL_PASS, // Mật khẩu đăng nhập Outlook
+                user: process.env.EMAIL_USER, // Địa chỉ Gmail của bạn
+                pass: process.env.EMAIL_PASS, // Mật khẩu ứng dụng 16 ký tự (KHÔNG PHẢI PASS GMAIL THƯỜNG)
             },
-            tls: {
-                ciphers: 'SSLv3',
-                rejectUnauthorized: false 
-            },
-            // QUAN TRỌNG: Dòng này ép Node.js chỉ dùng IPv4, tránh bị treo
-            family: 4, 
-            // Tăng thời gian chờ
-            connectionTimeout: 20000, 
-            greetingTimeout: 10000,
         });
 
-        console.log(`⏳ Đang kết nối Outlook (IPv4) để gửi tới: ${email}...`);
+        console.log(`⏳ Đang gửi mail tới: ${email}...`);
 
-        const info = await transporter.sendMail({
+        await transporter.sendMail({
             from: `"Shop Sách 3 Anh Em" <${process.env.EMAIL_USER}>`,
             to: email,
             subject: subject,
             text: text,
         });
 
-        console.log(`✅ Email đã gửi thành công! ID: ${info.messageId}`);
-        return true;
-
+        console.log("✅ Email gửi thành công!");
     } catch (error) {
-        console.error("❌ Gửi email thất bại. Chi tiết lỗi:");
-        console.error(error.message || error);
-        return false;
+        console.error("❌ Lỗi gửi mail:", error);
     }
 };
 
