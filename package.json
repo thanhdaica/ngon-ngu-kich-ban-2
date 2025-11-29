@@ -6,8 +6,7 @@
   "scripts": {
     "build": "npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend",
     "start": "npm run start --prefix backend"
-},
-
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/thanhdaica/ngon-ngu-kich-ban-2.git"
@@ -15,14 +14,15 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/thanhdaica/ngon-ngu-kich-ban-2/issues"
   },
   "homepage": "https://github.com/thanhdaica/ngon-ngu-kich-ban-2#readme",
   "dependencies": {
+    "axios": "^1.13.2"
   },
   "engines": {
-    "node": ">=18.0.0" 
+    "node": ">=18.0.0"
   }
 }
