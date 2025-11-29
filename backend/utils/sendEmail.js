@@ -4,23 +4,21 @@ import nodemailer from 'nodemailer';
 const sendEmail = async (email, subject, text) => {
     try {
         const transporter = nodemailer.createTransport({
-            // 1. Dùng host cụ thể thay vì service: 'gmail'
-            host: "smtp.gmail.com", 
-            port: 587, 
-            secure: false, // false cho port 587 (STARTTLS)
+            host: "smtp.gmail.com",
+            port: 465,              // <--- ĐỔI CỔNG THÀNH 465
+            secure: true,           // <--- BẮT BUỘC TRUE VỚI CỔNG 465
             auth: {
                 user: process.env.EMAIL_USER, 
                 pass: process.env.EMAIL_PASS, 
             },
-            // 2. QUAN TRỌNG: Ép buộc dùng IPv4 để tránh lỗi Timeout trên Render
+            // Vẫn giữ lại các cấu hình này để tối ưu mạng
             family: 4, 
-            // 3. Tăng thời gian chờ lên
             connectionTimeout: 10000, 
             greetingTimeout: 5000,
             socketTimeout: 10000,
         });
 
-        console.log(`⏳ Đang kết nối Gmail (IPv4) để gửi tới: ${email}...`);
+        console.log(`⏳ Đang kết nối Gmail (Port 465 - SSL) để gửi tới: ${email}...`);
 
         // Kiểm tra kết nối trước
         await transporter.verify();
@@ -37,11 +35,15 @@ const sendEmail = async (email, subject, text) => {
         return true;
 
     } catch (error) {
-        // Log lỗi chi tiết ra để debug
         console.error("❌ Lỗi gửi mail (Chi tiết):");
+        // In ra mã lỗi cụ thể để debug
+        if (error.code === 'EAUTH') {
+            console.error("--> Sai Email hoặc Mật khẩu ứng dụng.");
+        } else if (error.code === 'ETIMEDOUT') {
+            console.error("--> Mạng Render bị chặn kết nối đến Gmail.");
+        }
         console.error(error);
         
-        // QUAN TRỌNG: Ném lỗi ra ngoài để Controller biết mà dừng lại
         throw new Error("Không thể gửi email: " + error.message);
     }
 };
