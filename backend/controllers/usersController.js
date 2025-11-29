@@ -52,25 +52,32 @@ class UserController {
             const hashedPassword = await bcrypt.hash(password, salt);
 
             // E. Lưu User + OTP vào DB
-            await User.create({
+            const newUser = await User.create({
                 name,
                 email: email.toLowerCase(),
                 password: hashedPassword,
-                isVerified: false, // Bắt buộc false
-                otp: otpCode,      // Lưu OTP vừa sinh ra
-                otpExpires: Date.now() + 10 * 60 * 1000 // Hết hạn sau 10 phút
+                isVerified: false, 
+                otp: otpCode,
+                otpExpires: Date.now() + 10 * 60 * 1000 
             });
 
-            // F. Gửi Email chứa OTP thật
-            const subject = "Mã xác thực (OTP) - Web Sách 3 Anh Em";
-            const text = `Xin chào ${name},\n\nMã xác thực bảo mật của bạn là: ${otpCode}\n\nMã này chỉ có hiệu lực trong 10 phút. Tuyệt đối không chia sẻ mã này cho ai.`;
-            
-            await sendEmail(email, subject, text);
+            // F. Gửi Email (Bọc trong try-catch riêng hoặc để catch tổng xử lý)
+            try {
+                const subject = "Mã xác thực (OTP) - Web Sách 3 Anh Em";
+                const text = `Xin chào ${name},\n\nMã OTP của bạn là: ${otpCode}`;
+                
+                await sendEmail(email, subject, text); // Nếu lỗi, nó sẽ nhảy xuống catch
 
-            res.status(201).json({
-                message: "Mã OTP đã được gửi đến Email của bạn. Vui lòng kiểm tra.",
-                email: email 
-            });
+                res.status(201).json({
+                    message: "Đăng ký thành công! Vui lòng kiểm tra Email.",
+                    email: email 
+                });
+            } catch (emailError) {
+                // Nếu gửi mail lỗi -> Xóa user vừa tạo để tránh rác DB
+                await User.findByIdAndDelete(newUser._id);
+                console.error("Gửi mail thất bại, đã rollback user:", emailError);
+                return res.status(500).json({ message: "Lỗi gửi email xác thực. Vui lòng thử lại sau." });
+            }
 
         } catch (error) {
             console.error(error);

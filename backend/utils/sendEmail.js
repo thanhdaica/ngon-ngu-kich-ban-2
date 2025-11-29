@@ -4,16 +4,17 @@ import nodemailer from 'nodemailer';
 const sendEmail = async (email, subject, text) => {
     try {
         const transporter = nodemailer.createTransport({
-            host: "smtp.gmail.com", // Dùng host trực tiếp của Gmail
-            port: 587,              // Cổng chuẩn cho TLS
-            secure: false,          // false cho port 587
+            // 1. Dùng host cụ thể thay vì service: 'gmail'
+            host: "smtp.gmail.com", 
+            port: 587, 
+            secure: false, // false cho port 587 (STARTTLS)
             auth: {
                 user: process.env.EMAIL_USER, 
                 pass: process.env.EMAIL_PASS, 
             },
-            // --- QUAN TRỌNG: FIX LỖI TIMEOUT TRÊN RENDER ---
-            family: 4, // Ép buộc chỉ dùng IPv4 (Fix lỗi ETIMEDOUT)
-            // Tăng thời gian chờ lên
+            // 2. QUAN TRỌNG: Ép buộc dùng IPv4 để tránh lỗi Timeout trên Render
+            family: 4, 
+            // 3. Tăng thời gian chờ lên
             connectionTimeout: 10000, 
             greetingTimeout: 5000,
             socketTimeout: 10000,
@@ -21,9 +22,9 @@ const sendEmail = async (email, subject, text) => {
 
         console.log(`⏳ Đang kết nối Gmail (IPv4) để gửi tới: ${email}...`);
 
-        // Kiểm tra kết nối trước khi gửi (Optional nhưng tốt để debug)
+        // Kiểm tra kết nối trước
         await transporter.verify();
-        console.log("✅ Kết nối SMTP thành công!");
+        console.log("✅ Kết nối SMTP thành công! Đang gửi...");
 
         const info = await transporter.sendMail({
             from: `"Shop Sách 3 Anh Em" <${process.env.EMAIL_USER}>`,
@@ -36,9 +37,12 @@ const sendEmail = async (email, subject, text) => {
         return true;
 
     } catch (error) {
-        console.error("❌ Lỗi gửi mail chi tiết:");
+        // Log lỗi chi tiết ra để debug
+        console.error("❌ Lỗi gửi mail (Chi tiết):");
         console.error(error);
-        return false;
+        
+        // QUAN TRỌNG: Ném lỗi ra ngoài để Controller biết mà dừng lại
+        throw new Error("Không thể gửi email: " + error.message);
     }
 };
 
