@@ -91,6 +91,7 @@ class UserController {
 
 
     // --- 2. XÁC THỰC OTP (ĐÃ FIX LỖI SO SÁNH) ---
+    // --- 2. XÁC THỰC OTP (ĐÃ FIX LỖI SO SÁNH CUỐI CÙNG) ---
     async verifyOTP(req, res) {
         try {
             const { email, otp } = req.body;
@@ -105,9 +106,9 @@ class UserController {
                 return res.status(400).json({ message: "Tài khoản này đã được xác thực rồi." });
             }
 
-            // --- KIỂM TRA MÃ OTP (THE CRITICAL FIX) ---
-            // Ép cả hai giá trị về String để so sánh an toàn
-            if (String(user.otp) !== String(otp)) { 
+            // --- FIX LỖI NGHIÊM NGẶT TẠI ĐÂY ---
+            // Ép user.otp và otp về cùng kiểu String để so sánh
+            if (String(user.otp) !== String(otp)) { // <-- ĐÃ SỬA: Dùng String() để đảm bảo
                 return res.status(400).json({ message: "Mã OTP không chính xác!" });
             }
 
